@@ -16,9 +16,10 @@ import {
 interface OwnerWelcomeScreenProps {
   data: OwnerSetupData;
   onReset: () => void;
+  onGoToDashboard: () => void;
 }
 
-export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, onReset }) => {
+export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, onReset, onGoToDashboard }) => {
   const { t, language } = useLanguage();
   const soundFx = useSoundEffects();
   const { speak } = useVoiceAssistant();
@@ -242,7 +243,7 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
           type="button"
           onClick={() => {
             soundFx.playSuccessCelebration();
-            alert(`🎉 ${data.shopName} Dashboard!`);
+            onGoToDashboard();
           }}
           className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-lg shadow-2xl shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 group"
         >

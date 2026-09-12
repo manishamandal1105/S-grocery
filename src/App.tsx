@@ -10,6 +10,7 @@ import { OwnerSetupWizard } from './components/OwnerSetupWizard';
 import { ReviewConfirmScreen } from './components/ReviewConfirmScreen';
 import { OwnerWelcomeScreen } from './components/OwnerWelcomeScreen';
 import { StaffFlow } from './components/StaffFlow';
+import { OwnerDashboard } from './components/OwnerDashboard';
 
 export const App: React.FC = () => {
   const { language } = useLanguage();
@@ -52,6 +53,11 @@ export const App: React.FC = () => {
       quickPin: '',
     });
   };
+
+  // Dashboard is full-screen — render it outside the onboarding shell
+  if (currentStep === 'owner-dashboard') {
+    return <OwnerDashboard data={ownerData} onReset={handleResetAll} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col justify-between p-2 sm:p-4 md:p-6 relative overflow-x-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950">
@@ -113,7 +119,11 @@ export const App: React.FC = () => {
         )}
 
         {currentStep === 'owner-welcome' && (
-          <OwnerWelcomeScreen data={ownerData} onReset={handleResetAll} />
+          <OwnerWelcomeScreen
+            data={ownerData}
+            onReset={handleResetAll}
+            onGoToDashboard={() => setCurrentStep('owner-dashboard')}
+          />
         )}
 
         {currentStep === 'staff-flow' && (

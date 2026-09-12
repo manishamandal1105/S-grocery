@@ -11,6 +11,7 @@ export type OnboardingStep =
   | 'owner-setup'
   | 'owner-review'
   | 'owner-welcome'
+  | 'owner-dashboard'
   | 'staff-flow';
 
 export type OwnerSetupSubStep =
