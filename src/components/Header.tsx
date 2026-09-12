@@ -1,54 +1,104 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Language } from '../types';
-import { ShoppingBag, Globe, Volume2, Sparkles } from 'lucide-react';
+import { Language, OnboardingStep } from '../types';
+import { useSoundEffects } from '../hooks/useSoundEffects';
+import { ShoppingBag, Volume2, VolumeX, ArrowLeft, RotateCcw } from 'lucide-react';
 
 interface HeaderProps {
-  onSpeakWelcome?: () => void;
+  currentStep: OnboardingStep;
+  onBack?: () => void;
+  onReset?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onSpeakWelcome }) => {
+export const Header: React.FC<HeaderProps> = ({ currentStep, onBack, onReset }) => {
   const { language, setLanguage, t } = useLanguage();
+  const soundFx = useSoundEffects();
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const languages: { id: Language; label: string; flag: string }[] = [
-    { id: 'bn', label: 'বাংলা', flag: '🇧🇩/🇮🇳' },
-    { id: 'en', label: 'English', flag: '🌐' },
-    { id: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
+  const languages: { id: Language; label: string }[] = [
+    { id: 'bn', label: 'বাংলা' },
+    { id: 'en', label: 'English' },
+    { id: 'hi', label: 'हिंदी' },
   ];
 
+  const handleToggleSound = () => {
+    const newState = !soundEnabled;
+    setSoundEnabled(newState);
+    soundFx.enabled = newState;
+    if (newState) soundFx.playClick();
+  };
+
+  const handleLanguageChange = (lang: Language) => {
+    soundFx.playClick();
+    setLanguage(lang);
+  };
+
   return (
-    <header className="w-full max-w-4xl mx-auto pt-6 pb-4 px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-      {/* Brand Logo & Name */}
-      <div className="flex items-center gap-3 group cursor-pointer">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform duration-200">
-          <ShoppingBag className="w-6 h-6" />
-        </div>
-        <div>
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-              {t('appName')}
-            </h1>
-            <span className="bg-emerald-100 text-emerald-800 text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-600" /> Free
-            </span>
+    <header className="w-full max-w-4xl mx-auto pt-4 pb-2 px-4 flex items-center justify-between gap-3 relative z-30">
+      {/* Brand & Step Back */}
+      <div className="flex items-center gap-3">
+        {onBack && currentStep !== 'splash' && currentStep !== 'language' && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-10 h-10 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all shadow-sm"
+            title={t('backBtn')}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        <div
+          onClick={onReset}
+          role="button"
+          tabIndex={0}
+          className="flex items-center gap-2.5 cursor-pointer group"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform">
+            <ShoppingBag className="w-5 h-5" />
           </div>
-          <p className="text-xs text-slate-500 font-medium">
-            {t('appTagline')}
-          </p>
+          <div className="hidden sm:block">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-lg font-black text-white tracking-tight">
+                {t('appName')}
+              </h1>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                {t('proBadge')}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">
+              {t('appTagline')}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Language Switcher + Audio Guide Button */}
-      <div className="flex items-center gap-2 bg-white/80 p-1.5 rounded-2xl border border-slate-200/80 shadow-sm backdrop-blur-md">
-        <div className="flex items-center gap-1">
+      {/* Right Controls: Sound Toggle + Language Switcher + Reset */}
+      <div className="flex items-center gap-2">
+        {/* Sound Toggle */}
+        <button
+          type="button"
+          onClick={handleToggleSound}
+          className={`p-2 rounded-2xl border transition-all ${
+            soundEnabled
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 shadow-sm'
+              : 'bg-slate-800 text-slate-500 border-slate-700'
+          }`}
+          title={soundEnabled ? t('soundOn') : t('soundOff')}
+        >
+          {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+        </button>
+
+        {/* Compact Language Selector */}
+        <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-2xl border border-slate-700 backdrop-blur-md">
           {languages.map((lang) => (
             <button
               key={lang.id}
-              onClick={() => setLanguage(lang.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-1 ${
+              onClick={() => handleLanguageChange(lang.id)}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
                 language === lang.id
-                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               {lang.label}
@@ -56,13 +106,15 @@ export const Header: React.FC<HeaderProps> = ({ onSpeakWelcome }) => {
           ))}
         </div>
 
-        {onSpeakWelcome && (
+        {/* Reset / Home */}
+        {onReset && currentStep !== 'splash' && (
           <button
-            onClick={onSpeakWelcome}
-            title={t('speakPrompt')}
-            className="p-2 rounded-xl text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors duration-200 ml-1"
+            type="button"
+            onClick={onReset}
+            className="p-2 rounded-2xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs transition-colors"
+            title={t('resetFlow')}
           >
-            <Volume2 className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4" />
           </button>
         )}
       </div>

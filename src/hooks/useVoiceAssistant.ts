@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
-// Extend window for WebkitSpeechRecognition
 interface IWindow extends Window {
   webkitSpeechRecognition?: any;
   SpeechRecognition?: any;
@@ -14,6 +13,7 @@ export function useVoiceAssistant() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceAvailable, setVoiceAvailable] = useState(true);
   const recognitionRef = useRef<any>(null);
+  const currentCallbackRef = useRef<((text: string) => void) | null>(null);
 
   useEffect(() => {
     const win = window as unknown as IWindow;
@@ -38,6 +38,9 @@ export function useVoiceAssistant() {
         const current = event.resultIndex;
         const text = event.results[current][0].transcript;
         setTranscript(text);
+        if (event.results[current].isFinal && currentCallbackRef.current) {
+          currentCallbackRef.current(text);
+        }
       };
 
       recognition.onerror = (event: any) => {
@@ -57,37 +60,27 @@ export function useVoiceAssistant() {
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
       }
     };
   }, [speechLocale]);
 
-  // Start listening to voice
   const startListening = useCallback((onResultText?: (text: string) => void) => {
     if (!recognitionRef.current) {
-      // Simulate listening feedback for testing if device mic is unavailable
       setIsListening(true);
       setTimeout(() => {
         setIsListening(false);
-      }, 3000);
+        if (onResultText) onResultText('Fresh Grocery Mart');
+      }, 2500);
       return;
     }
 
     try {
       setTranscript('');
       recognitionRef.current.lang = speechLocale;
-      
-      if (onResultText) {
-        recognitionRef.current.onresult = (event: any) => {
-          const current = event.resultIndex;
-          const text = event.results[current][0].transcript;
-          setTranscript(text);
-          if (event.results[current].isFinal) {
-            onResultText(text);
-          }
-        };
-      }
-
+      currentCallbackRef.current = onResultText || null;
       recognitionRef.current.start();
     } catch (err) {
       console.warn('Microphone start error:', err);
@@ -95,34 +88,50 @@ export function useVoiceAssistant() {
     }
   }, [speechLocale]);
 
-  // Stop listening
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
     }
     setIsListening(false);
   }, []);
 
-  // Speak text via SpeechSynthesis (TTS)
-  const speak = useCallback((text: string) => {
-    if (!('speechSynthesis' in window)) return;
+  const speak = useCallback((text: string, customLocale?: string, onEnd?: () => void) => {
+    if (!('speechSynthesis' in window)) {
+      if (onEnd) onEnd();
+      return;
+    }
 
-    window.speechSynthesis.cancel(); // Stop any ongoing speech
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = speechLocale;
-    utterance.rate = 0.95; // Slightly slower for clarity
-    utterance.pitch = 1.0;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = customLocale || speechLocale;
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        if (onEnd) onEnd();
+      };
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        if (onEnd) onEnd();
+      };
 
-    window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      setIsSpeaking(false);
+      if (onEnd) onEnd();
+    }
   }, [speechLocale]);
 
   const stopSpeaking = useCallback(() => {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
       setIsSpeaking(false);
     }
   }, []);

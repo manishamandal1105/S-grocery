@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Language } from '../types';
 import { translations } from '../translations/locales';
 
@@ -22,7 +22,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     localStorage.setItem('sgrocery_lang', lang);
   };
 
-  // Get locale string for Web Speech API
   const speechLocale = language === 'bn' ? 'bn-IN' : language === 'hi' ? 'hi-IN' : 'en-IN';
 
   const t = (key: keyof typeof translations['en']): string => {
