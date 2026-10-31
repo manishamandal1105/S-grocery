@@ -5,6 +5,7 @@ export type ShopType = 'small' | 'medium' | 'large';
 export type UserRole = 'owner' | 'helper';
 
 export type OnboardingStep =
+  | 'welcome'
   | 'splash'
   | 'language'
   | 'role'
@@ -55,4 +56,24 @@ export interface ShopProfile {
   code: string;
   type: ShopType;
   address: string;
+}
+
+export interface HourlySalesPoint {
+  time: string;
+  amount: number;
+}
+
+export interface DashboardMetrics {
+  todaySales: number;
+  todayPurchases: number;
+  todayExpenses: number;
+  todayProfitLoss: number;
+  salesGrowth: number;
+  purchasesGrowth: number;
+  expensesGrowth: number;
+  profitLossGrowth: number;
+  outOfStockCount: number;
+  lowStockCount: number;
+  expiringCount: number;
+  hourlySales: HourlySalesPoint[];
 }

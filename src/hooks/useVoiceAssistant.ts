@@ -72,7 +72,7 @@ export function useVoiceAssistant() {
       setIsListening(true);
       setTimeout(() => {
         setIsListening(false);
-        if (onResultText) onResultText('Fresh Grocery Mart');
+        if (onResultText) onResultText('Fresh Daily Mart');
       }, 2500);
       return;
     }
@@ -106,9 +106,20 @@ export function useVoiceAssistant() {
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = customLocale || speechLocale;
+      const targetLocale = customLocale || speechLocale;
+      utterance.lang = targetLocale;
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
+
+      // Try to find matching voice for target language
+      const voices = window.speechSynthesis.getVoices();
+      const langPrefix = targetLocale.split('-')[0].toLowerCase();
+      const matchingVoice = voices.find(
+        (v) => v.lang.toLowerCase().startsWith(langPrefix) || v.lang.toLowerCase().replace('_', '-').includes(targetLocale.toLowerCase())
+      );
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
+      }
 
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => {

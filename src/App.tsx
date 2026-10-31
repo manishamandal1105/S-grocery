@@ -3,6 +3,7 @@ import { useLanguage } from './context/LanguageContext';
 import { OnboardingStep, OwnerSetupData, UserRole } from './types';
 import { useSoundEffects } from './hooks/useSoundEffects';
 import { Header } from './components/Header';
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { SplashScreen } from './components/SplashScreen';
 import { LanguageSelectScreen } from './components/LanguageSelectScreen';
 import { RoleSelectScreen } from './components/RoleSelectScreen';
@@ -16,8 +17,8 @@ export const App: React.FC = () => {
   const { language } = useLanguage();
   const soundFx = useSoundEffects();
 
-  // Primary Step Machine
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('splash');
+  // Primary Step Machine - starts at the Welcome / Getting Started page (Very first page)
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
 
   // Form State for Owner Setup
   const [ownerData, setOwnerData] = useState<OwnerSetupData>({
@@ -33,7 +34,8 @@ export const App: React.FC = () => {
 
   const handleStepBack = () => {
     soundFx.playClick();
-    if (currentStep === 'role') setCurrentStep('language');
+    if (currentStep === 'language') setCurrentStep('welcome');
+    else if (currentStep === 'role') setCurrentStep('language');
     else if (currentStep === 'owner-setup') setCurrentStep('role');
     else if (currentStep === 'owner-review') setCurrentStep('owner-setup');
     else if (currentStep === 'staff-flow') setCurrentStep('role');
@@ -41,7 +43,7 @@ export const App: React.FC = () => {
 
   const handleResetAll = () => {
     soundFx.playClick();
-    setCurrentStep('language');
+    setCurrentStep('welcome');
     setOwnerData({
       loginMethod: 'email',
       email: '',
@@ -60,18 +62,13 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-between p-2 sm:p-4 md:p-6 relative overflow-x-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950">
-      {/* Background Animated Atmosphere Lights */}
-      <div className="fixed -top-40 -left-40 w-[450px] h-[450px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed top-1/3 -right-40 w-[450px] h-[450px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed -bottom-40 left-1/3 w-[450px] h-[450px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Top Header (Hidden on splash for clean cinematic intro) */}
-      {currentStep !== 'splash' && (
+    <div className="min-h-screen flex flex-col justify-between bg-[#fbfcf9] text-slate-800 relative selection:bg-emerald-600 selection:text-white">
+      {/* Top Header Controls (Hidden on Welcome screen to match the exact mockup) */}
+      {currentStep !== 'splash' && currentStep !== 'welcome' && (
         <Header
           currentStep={currentStep}
           onBack={
-            currentStep !== 'owner-welcome' && currentStep !== 'language'
+            currentStep !== 'owner-welcome'
               ? handleStepBack
               : undefined
           }
@@ -79,14 +76,24 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Main Dynamic Viewport */}
-      <main className="w-full max-w-4xl mx-auto my-auto py-2 sm:py-4 relative z-10 flex items-center justify-center">
+      {/* Main Viewport matching full-screen responsive across all devices */}
+      <main className="w-full flex-1 flex flex-col justify-between bg-[#fbfcf9] relative">
+        {currentStep === 'welcome' && (
+          <WelcomeScreen
+            onGetStarted={() => setCurrentStep('language')}
+            onSkip={() => setCurrentStep('language')}
+          />
+        )}
+
         {currentStep === 'splash' && (
           <SplashScreen onComplete={() => setCurrentStep('language')} />
         )}
 
         {currentStep === 'language' && (
-          <LanguageSelectScreen onContinue={() => setCurrentStep('role')} />
+          <LanguageSelectScreen
+            onContinue={() => setCurrentStep('role')}
+            onBack={() => setCurrentStep('welcome')}
+          />
         )}
 
         {currentStep === 'role' && (
@@ -133,13 +140,6 @@ export const App: React.FC = () => {
           />
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="w-full max-w-md mx-auto text-center py-3 relative z-10">
-        <p className="text-[11px] text-slate-500 font-medium">
-          🌱 S-Grocery Smart Shop Management • Voice Enabled
-        </p>
-      </footer>
     </div>
   );
 };

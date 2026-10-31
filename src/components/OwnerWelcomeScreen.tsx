@@ -81,7 +81,7 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 animate-fade-in relative">
+    <div className="w-full max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 animate-fade-in relative text-slate-800">
       {/* Confetti Particles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {[...Array(20)].map((_, i) => (
@@ -101,16 +101,16 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
 
       {/* Main Welcome Hero Card */}
       <div className="text-center mb-8 relative z-10">
-        <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-3xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-emerald-400 flex items-center justify-center text-slate-950 shadow-2xl shadow-emerald-500/40 animate-bounce">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-3xl bg-[#e8f5ec] border border-[#d2e8d9] flex items-center justify-center text-[#235338] shadow-md animate-bounce">
           <Store className="w-10 h-10 sm:w-12 sm:h-12" />
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 mb-2">
-          <Sparkles className="w-4 h-4 text-amber-400" />
+        <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#e8f5ec] text-[#235338] text-xs font-bold border border-[#d2e8d9] mb-2">
+          <Sparkles className="w-4 h-4 text-amber-500" />
           <span>{t('welcomeStoreReady')}</span>
         </div>
 
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#183626] tracking-tight">
           {language === 'bn'
             ? `${data.shopName}-এ স্বাগতম!`
             : language === 'hi'
@@ -118,56 +118,56 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
             : `Welcome to ${data.shopName}!`}
         </h1>
 
-        <p className="text-sm text-slate-300 mt-1.5 max-w-md mx-auto">
+        <p className="text-sm text-[#5e7768] mt-1.5 max-w-md mx-auto">
           {t('welcomeSubtitle')}
         </p>
       </div>
 
       {/* Store Information Badge */}
-      <div className="p-6 rounded-3xl bg-slate-800/80 border border-slate-700/80 shadow-2xl space-y-4 mb-6 relative z-10">
+      <div className="p-6 rounded-3xl bg-white border border-[#e2ede5] shadow-sm space-y-4 mb-6 relative z-10">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
-          <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-700/60">
-            <span className="text-[10px] uppercase font-bold text-slate-400">{t('welcomeOwnerLabel')}</span>
-            <p className="text-sm font-bold text-white mt-0.5 truncate">{data.ownerName}</p>
+          <div className="p-3 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5]">
+            <span className="text-[10px] uppercase font-bold text-[#5e7768]">{t('welcomeOwnerLabel')}</span>
+            <p className="text-sm font-bold text-[#183626] mt-0.5 truncate">{data.ownerName}</p>
           </div>
 
-          <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-700/60">
-            <span className="text-[10px] uppercase font-bold text-slate-400">{t('welcomeStoreCodeLabel')}</span>
-            <p className="text-sm font-black text-emerald-400 mt-0.5">GROC-8821</p>
+          <div className="p-3 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5]">
+            <span className="text-[10px] uppercase font-bold text-[#5e7768]">{t('welcomeStoreCodeLabel')}</span>
+            <p className="text-sm font-black text-[#235338] mt-0.5">GROC-8821</p>
           </div>
 
-          <div className="col-span-2 sm:col-span-1 p-3 rounded-2xl bg-slate-900/80 border border-slate-700/60">
-            <span className="text-[10px] uppercase font-bold text-slate-400">{t('welcomeTypeLabel')}</span>
-            <p className="text-sm font-bold text-teal-300 mt-0.5 uppercase">{data.businessType}</p>
+          <div className="col-span-2 sm:col-span-1 p-3 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5]">
+            <span className="text-[10px] uppercase font-bold text-[#5e7768]">{t('welcomeTypeLabel')}</span>
+            <p className="text-sm font-bold text-[#235338] mt-0.5 uppercase">{data.businessType}</p>
           </div>
         </div>
       </div>
 
       {/* Daily Quick PIN Unlock Demo Box */}
-      <div className="p-6 rounded-3xl bg-gradient-to-b from-slate-800/90 to-emerald-950/40 border-2 border-emerald-500/30 shadow-xl mb-6 relative z-10 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
+      <div className="p-6 rounded-3xl bg-white border border-[#e2ede5] shadow-sm mb-6 relative z-10 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#edf4ee]">
           <div className="flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-amber-400" />
-            <h3 className="text-sm font-bold text-white">
+            <KeyRound className="w-5 h-5 text-amber-500" />
+            <h3 className="text-sm font-bold text-[#183626]">
               {t('welcomeFastUnlockTitle')}
             </h3>
           </div>
-          <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full">
+          <span className="text-[10px] bg-[#e8f5ec] text-[#235338] font-bold px-2 py-0.5 rounded-full border border-[#d2e8d9]">
             PIN: {data.quickPin}
           </span>
         </div>
 
         {/* Unlock Status Alert */}
         {unlockStatus === 'success' && (
-          <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-bounce">
-            <Unlock className="w-4 h-4 text-emerald-400" />
+          <div className="p-3 rounded-2xl bg-[#e8f5ec] border border-[#cbe5cf] text-[#235338] text-xs font-bold flex items-center gap-2 animate-bounce">
+            <Unlock className="w-4 h-4 text-[#235338]" />
             <span>{t('welcomeUnlockSuccess')}</span>
           </div>
         )}
 
         {unlockStatus === 'failed' && (
-          <div className="p-3 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-300 text-xs font-bold flex items-center gap-2 animate-shake">
-            <Lock className="w-4 h-4 text-red-400" />
+          <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2 animate-shake">
+            <Lock className="w-4 h-4 text-red-500" />
             <span>{t('welcomeUnlockFailed')}</span>
           </div>
         )}
@@ -181,10 +181,10 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
                 key={idx}
                 className={`w-12 h-14 rounded-2xl border-2 flex items-center justify-center text-xl font-bold transition-all ${
                   unlockStatus === 'success'
-                    ? 'border-emerald-400 bg-emerald-500 text-slate-950 shadow-md'
+                    ? 'border-[#235338] bg-[#e8f5ec] text-[#235338] shadow-sm'
                     : digit
-                    ? 'border-amber-400 bg-amber-950/60 text-amber-300'
-                    : 'border-slate-700 bg-slate-900/80 text-slate-500'
+                    ? 'border-amber-400 bg-amber-50 text-amber-800'
+                    : 'border-[#dce8e0] bg-[#fbfcf9] text-slate-300'
                 }`}
               >
                 {digit ? '●' : ''}
@@ -202,7 +202,7 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
                   key={btn}
                   type="button"
                   onClick={handleClearPin}
-                  className="h-10 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+                  className="h-10 rounded-xl bg-[#edf4ee] hover:bg-[#e2ede4] text-[#1b3a2b] font-bold text-xs cursor-pointer"
                 >
                   {t('clearBtn')}
                 </button>
@@ -217,7 +217,7 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
                     soundFx.playClick();
                     setTestPin((prev) => prev.slice(0, -1));
                   }}
-                  className="h-10 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+                  className="h-10 rounded-xl bg-[#edf4ee] hover:bg-[#e2ede4] text-[#1b3a2b] font-bold text-xs cursor-pointer"
                 >
                   ⌫
                 </button>
@@ -228,7 +228,7 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
                 key={btn}
                 type="button"
                 onClick={() => handleTestPinDigit(btn)}
-                className="h-10 rounded-xl bg-slate-700/80 hover:bg-emerald-600 hover:text-slate-950 text-white font-bold text-base transition-all"
+                className="h-10 rounded-xl bg-white hover:bg-[#235338] hover:text-white border border-[#dce8e0] text-[#183626] font-bold text-base transition-all cursor-pointer shadow-2xs"
               >
                 {btn}
               </button>
@@ -245,7 +245,7 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
             soundFx.playSuccessCelebration();
             onGoToDashboard();
           }}
-          className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-lg shadow-2xl shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 group"
+          className="w-full py-4 px-6 rounded-2xl bg-[#235338] hover:bg-[#1a442c] text-white font-bold text-lg shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
         >
           <span>{t('btnLaunchDashboard')}</span>
           <ArrowRight className="w-6 h-6 group-hover:translate-x-1.5 transition-transform" />
@@ -258,7 +258,7 @@ export const OwnerWelcomeScreen: React.FC<OwnerWelcomeScreenProps> = ({ data, on
               soundFx.playClick();
               onReset();
             }}
-            className="text-xs font-semibold text-slate-400 hover:text-white px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors"
+            className="text-xs font-semibold text-[#5e7768] hover:text-[#183626] px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>{t('resetFlow')}</span>

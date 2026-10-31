@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply font-sans bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-slate-100 min-h-screen antialiased selection:bg-emerald-500 selection:text-white;
+    @apply font-sans bg-[#fbfcf9] text-slate-800 min-h-screen antialiased selection:bg-emerald-600 selection:text-white;
   }
 }
 
