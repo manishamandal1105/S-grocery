@@ -76,7 +76,7 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
       } else if (currentSubStep === 'quick-pin') {
         speak(t('pageAudioPin'));
       }
-    }, 450);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [currentSubStep, language, speak, t]);
@@ -143,8 +143,8 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
     soundFx.playClick();
     setFormData({
       loginMethod: 'email',
-      email: 'owner.rajesh@sgrocery.com',
-      phone: '01712345678',
+      email: 'mygrocer@gmail.com',
+      phone: '+12345678900',
       password: 'password123',
       ownerName: language === 'bn' ? 'রহিম মিয়া' : language === 'hi' ? 'राजेश कुमार' : 'Rajesh Kumar',
       shopName:
@@ -230,10 +230,10 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
       return;
     }
 
-    setCurrentSubStep('business-type');
+    setCurrentSubStep('quick-pin');
   };
 
-  // Step 3 -> Step 4 validation & transition
+  // Step 3 -> Step 4 validation & transition (kept for compatibility)
   const handleNextFromBusinessType = () => {
     soundFx.playClick();
     setErrorMessage('');
@@ -247,7 +247,7 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
     setErrorMessage('');
 
     if (formData.quickPin.length !== 4) {
-      const error = t('errorPinLength');
+      const error = t('errorEmptyPin');
       setErrorMessage(error);
       speak(error);
       return;
@@ -314,10 +314,9 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
   ];
 
   const subStepsInfo = [
-    { id: 'credentials', number: 1, title: t('stepCreds') },
-    { id: 'shop-details', number: 2, title: t('stepDetails') },
-    { id: 'business-type', number: 3, title: t('stepType') },
-    { id: 'quick-pin', number: 4, title: t('stepPin') },
+    { id: 'credentials', number: 1, title: t('loginPageTitle') },
+    { id: 'shop-details', number: 2, title: t('shopInfoPageTitle') },
+    { id: 'quick-pin', number: 3, title: t('stepPin') },
   ];
 
   const getCurrentStepIndex = () => {
@@ -325,708 +324,799 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
       case 'credentials':
         return 1;
       case 'shop-details':
-        return 2;
       case 'business-type':
-        return 3;
+        return 2;
       case 'quick-pin':
-        return 4;
+        return 3;
       default:
         return 1;
     }
   };
 
-  return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 animate-fade-in relative">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold border border-emerald-500/20 mb-1.5">
-            <Store className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{t('roleOwnerTitle')}</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {t('ownerSetupTitle')}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300">
-            {t('ownerSetupSubtitle')}
-          </p>
-        </div>
+  const renderForgotModal = () => {
+    if (!showForgotModal) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
+        <div className="w-full max-w-md p-6 sm:p-7 rounded-3xl bg-white border border-[#dce8e0] shadow-2xl space-y-5 relative text-slate-800">
+          <button
+            type="button"
+            onClick={handleCloseForgotModal}
+            className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-[#edf4ee] transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
-        {/* Demo Fill Button */}
-        <button
-          type="button"
-          onClick={handleFillDemo}
-          className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all shadow-sm"
-        >
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>{t('demoAutoFillOwner')}</span>
-        </button>
-      </div>
-
-      {/* 4-Step Progress Bar Navigator */}
-      <div className="mb-6 p-2 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md">
-        <div className="grid grid-cols-4 gap-1.5">
-          {subStepsInfo.map((st) => {
-            const currentIdx = getCurrentStepIndex();
-            const isCurrent = st.number === currentIdx;
-            const isCompleted = st.number < currentIdx;
-
-            return (
-              <div
-                key={st.id}
-                className={`py-2 px-1.5 rounded-xl text-center transition-all ${
-                  isCurrent
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-md'
-                    : isCompleted
-                    ? 'bg-emerald-950/60 text-emerald-300 font-bold border border-emerald-500/30'
-                    : 'bg-slate-900/40 text-slate-500 font-medium'
-                }`}
-              >
-                <div className="text-[10px] uppercase tracking-wider">
-                  {t('stepBadge')} {st.number}
-                </div>
-                <div className="text-[11px] truncate">{st.title}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Error Alert */}
-      {errorMessage && (
-        <div className="mb-5 p-3.5 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-200 text-xs font-semibold flex items-center gap-2 animate-shake">
-          <span>⚠️ {errorMessage}</span>
-        </div>
-      )}
-
-      {/* Voice Assistant Live Waveform Status */}
-      {isListening && (
-        <div className="mb-5 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-400/50 shadow-lg shadow-emerald-500/20 flex items-center justify-between gap-4 animate-pulse">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold">
-              <Mic className="w-5 h-5 animate-bounce" />
+            <div className="w-11 h-11 rounded-2xl bg-[#e8f5ec] text-[#235338] flex items-center justify-center font-bold">
+              <HelpCircle className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-bold text-emerald-300">
-                {activeMicField === 'ownerName' ? t('ownerNameVoicePrompt') : t('shopNameVoicePrompt')}
+              <h3 className="text-lg font-bold text-[#183626]">
+                {t('forgotPasswordTitle')}
+              </h3>
+              <p className="text-xs text-[#5e7768]">
+                {t('forgotPasswordDesc')}
               </p>
-              <p className="text-[11px] text-slate-300">{t('speakClearlyHint')}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 h-6">
-            <span className="w-1 bg-emerald-400 rounded-full animate-wave-1"></span>
-            <span className="w-1 bg-emerald-400 rounded-full animate-wave-2"></span>
-            <span className="w-1 bg-emerald-400 rounded-full animate-wave-3"></span>
-            <span className="w-1 bg-emerald-400 rounded-full animate-wave-4"></span>
-            <span className="w-1 bg-emerald-400 rounded-full animate-wave-5"></span>
-          </div>
-        </div>
-      )}
-
-      {/* -------------------- SCREEN 1 OF 4: CREDENTIALS (EMAIL / PHONE & PASSWORD) -------------------- */}
-      {currentSubStep === 'credentials' && (
-        <form onSubmit={handleNextFromCredentials} className="space-y-6">
-          <div className="p-6 sm:p-7 rounded-3xl bg-slate-800/80 border-2 border-slate-700 shadow-xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-700/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-black">
-                  1
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white uppercase tracking-wider">
-                    {t('stepCreds')}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {t('ownerSetupSubtitle')}
-                  </p>
-                </div>
+          {forgotSuccess ? (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{t('forgotPasswordSuccess')}</span>
               </div>
-
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                {t('freeBadge')}
-              </span>
+              <button
+                type="button"
+                onClick={handleCloseForgotModal}
+                className="w-full py-2.5 rounded-xl bg-[#235338] text-white font-extrabold text-xs shadow-md hover:bg-[#1a442c]"
+              >
+                {t('btnClose')}
+              </button>
             </div>
-
-            {/* Login Method Segmented Toggle: Email vs Phone */}
-            <div>
-              <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-900/80 border border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFx.playClick();
-                    handleChange('loginMethod', 'email');
-                  }}
-                  className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                    formData.loginMethod === 'email'
-                      ? 'bg-emerald-500 text-slate-950 shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>{t('loginEmailTab')}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFx.playClick();
-                    handleChange('loginMethod', 'phone');
-                  }}
-                  className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                    formData.loginMethod === 'phone'
-                      ? 'bg-emerald-500 text-slate-950 shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Phone className="w-4 h-4" />
-                  <span>{t('loginPhoneTab')}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Email Field */}
-            {formData.loginMethod === 'email' ? (
+          ) : (
+            <form onSubmit={handleSubmitForgotPassword} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  {t('emailLabel')} *
+                <label className="block text-xs font-bold text-[#1b3a2b] mb-1.5">
+                  {formData.loginMethod === 'email' ? t('emailLabel') : t('phoneLabel')}
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Mail className="w-5 h-5" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e7768]">
+                    {formData.loginMethod === 'email' ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+                  </div>
+                  <input
+                    type={formData.loginMethod === 'email' ? 'email' : 'tel'}
+                    value={forgotContact}
+                    onChange={(e) => setForgotContact(e.target.value)}
+                    placeholder={formData.loginMethod === 'email' ? t('emailPlaceholder') : t('phonePlaceholder')}
+                    className="w-full bg-[#fbfcf9] border border-[#dce8e0] rounded-2xl py-3 px-4 pl-10 text-sm font-medium text-[#1b3a2b] placeholder-[#94a39a] focus:border-[#235338] outline-none"
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-3 px-5 rounded-2xl bg-[#235338] hover:bg-[#1a442c] text-white font-extrabold text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{t('btnSendResetLink')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCloseForgotModal}
+                  className="w-full py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  {t('btnClose')}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // -------------------- SCREEN 1 OF 4: SHOP OWNER LOGIN (MATCHES MOCKUP SCREEN 3 FULL-SCREEN) --------------------
+  if (currentSubStep === 'credentials') {
+    return (
+      <div className="w-full flex-1 flex flex-col justify-between bg-[#fbfcf9] text-slate-800 animate-fade-in relative pb-8 sm:pb-12">
+        <div className="w-full">
+          {/* Top Supermarket Grocery Aisle Banner with Curve matching Image 3 (Full-Width Edge-to-Edge) */}
+          <div className="w-full h-48 sm:h-60 md:h-72 lg:h-80 relative bg-slate-900 overflow-hidden">
+            <img
+              src="/assets/grocery_aisle.jpg"
+              alt="Grocery store aisle"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+            {/* Back Arrow on top-left */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                onBack();
+              }}
+              className="absolute top-4 left-4 p-2 rounded-full bg-white/85 hover:bg-white text-[#183626] shadow-md transition-colors cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+            </button>
+
+            {/* Organic Curved Wave transition down to the card */}
+            <svg
+              viewBox="0 0 1200 60"
+              className="absolute bottom-0 left-0 w-full h-10 sm:h-14 lg:h-16 text-[#fbfcf9] fill-current"
+              preserveAspectRatio="none"
+            >
+              <path d="M0,35 C380,70 820,0 1200,35 L1200,60 L0,60 Z" />
+            </svg>
+          </div>
+
+          {/* Overlapping Store Icon Badge matching Image 3 */}
+          <div className="flex justify-center -mt-9 sm:-mt-11 md:-mt-12 relative z-10">
+            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-[#e8f5ec] border-4 border-[#fbfcf9] text-[#183626] shadow-md flex items-center justify-center">
+              <Store className="w-8 h-8 sm:w-9 sm:h-9 stroke-[2]" />
+            </div>
+          </div>
+
+          {/* Title & Subtitle */}
+          <div className="text-center px-4 pt-3 pb-4 max-w-md sm:max-w-lg mx-auto">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#183626] tracking-tight">
+              {t('loginPageTitle')}
+            </h1>
+            <p className="text-sm sm:text-base text-[#5e7768] font-medium mt-1">
+              {t('loginPageSubtitle')}
+            </p>
+          </div>
+
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="max-w-md sm:max-w-lg mx-auto px-4 sm:px-6 mb-3">
+              <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2 animate-shake">
+                <span>⚠️ {errorMessage}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Segmented Toggle: Email vs Phone Number */}
+          <div className="px-4 sm:px-6 mb-5 max-w-xs sm:max-w-sm mx-auto">
+            <div className="grid grid-cols-2 p-1 rounded-2xl bg-[#edf4ee] border border-[#dce8e0]">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  handleChange('loginMethod', 'email');
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  formData.loginMethod === 'email'
+                    ? 'bg-[#235338] text-white shadow-sm'
+                    : 'text-[#486354] hover:text-[#1b3a2b]'
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>{t('loginEmailTab')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  handleChange('loginMethod', 'phone');
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  formData.loginMethod === 'phone'
+                    ? 'bg-[#235338] text-white shadow-sm'
+                    : 'text-[#486354] hover:text-[#1b3a2b]'
+                }`}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>{t('loginPhoneTab')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Form Inputs (Comfortable Centered Container on Tablet & Desktop) */}
+          <form onSubmit={handleNextFromCredentials} className="w-full max-w-md sm:max-w-lg mx-auto px-4 sm:px-6 space-y-4">
+            {formData.loginMethod === 'email' ? (
+              <div>
+                <label className="block text-xs font-bold text-[#1b3a2b] mb-1.5">
+                  {t('emailLabel')}
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e7768]">
+                    <Mail className="w-4 h-4" />
                   </div>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     placeholder={t('emailPlaceholder')}
-                    className="grocery-input pl-11 pr-4 text-sm font-medium"
+                    className="w-full bg-white border border-[#dce8e0] rounded-2xl py-3 px-4 pl-10 text-sm font-medium text-[#1b3a2b] placeholder-[#94a39a] focus:border-[#235338] focus:ring-2 focus:ring-[#235338]/15 outline-none shadow-xs transition-all"
                     autoFocus
                   />
                 </div>
               </div>
             ) : (
-              /* Phone Number Field */
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  {t('phoneLabel')} *
+                <label className="block text-xs font-bold text-[#1b3a2b] mb-1.5">
+                  {t('phoneLabel')}
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Phone className="w-5 h-5" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e7768]">
+                    <Phone className="w-4 h-4" />
                   </div>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleChange('phone', e.target.value)}
                     placeholder={t('phonePlaceholder')}
-                    className="grocery-input pl-11 pr-4 text-sm font-medium"
+                    className="w-full bg-white border border-[#dce8e0] rounded-2xl py-3 px-4 pl-10 text-sm font-medium text-[#1b3a2b] placeholder-[#94a39a] focus:border-[#235338] focus:ring-2 focus:ring-[#235338]/15 outline-none shadow-xs transition-all"
                     autoFocus
                   />
                 </div>
               </div>
             )}
 
-            {/* Password with Show/Hide */}
+            {/* Password */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-300">
-                  {t('passwordLabel')} *
-                </label>
-
-                {/* Forgot Password Button */}
-                <button
-                  type="button"
-                  onClick={handleOpenForgotModal}
-                  className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 hover:underline transition-colors flex items-center gap-1"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>{t('forgotPasswordBtn')}</span>
-                </button>
-              </div>
-
+              <label className="block text-xs font-bold text-[#1b3a2b] mb-1.5">
+                {t('passwordLabel')}
+              </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-5 h-5" />
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e7768]">
+                  <Lock className="w-4 h-4" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
                   placeholder={t('passwordPlaceholder')}
-                  className="grocery-input pl-11 pr-12 text-sm font-medium"
+                  className="w-full bg-white border border-[#dce8e0] rounded-2xl py-3 px-4 pl-10 pr-10 text-sm font-medium text-[#1b3a2b] placeholder-[#94a39a] focus:border-[#235338] focus:ring-2 focus:ring-[#235338]/15 outline-none shadow-xs transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#5e7768] hover:text-[#1b3a2b] cursor-pointer"
                   title={showPassword ? t('hidePassword') : t('showPassword')}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5 text-emerald-400" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* Forgot Password link */}
+              <div className="text-right mt-1.5">
+                <button
+                  type="button"
+                  onClick={handleOpenForgotModal}
+                  className="text-xs font-semibold text-[#235338] hover:underline cursor-pointer"
+                >
+                  {t('forgotPasswordBtn')}
                 </button>
               </div>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-700/60 text-xs text-slate-300 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{t('encryptedSecurityNote')}</span>
-            </div>
-          </div>
+            {/* Action Buttons */}
+            <div className="pt-2 space-y-2.5">
+              <button
+                type="submit"
+                className="w-full py-3.5 px-6 rounded-2xl bg-[#235338] hover:bg-[#1a442c] active:scale-[0.99] text-white font-bold text-base shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <span>{t('btnLogin')}</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform stroke-[2.5]" />
+              </button>
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              type="submit"
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-base shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group"
-            >
-              <span>{t('stepNextShopInfo')}</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+              {/* Divider: or */}
+              <div className="flex items-center justify-center gap-3 py-1">
+                <span className="h-px bg-[#e2ede5] flex-1" />
+                <span className="text-xs text-[#8ca094] font-medium">{t('orDivider')}</span>
+                <span className="h-px bg-[#e2ede5] flex-1" />
+              </div>
 
-            <div className="flex items-center justify-between">
+              {/* Secondary Button: Create New Account */}
               <button
                 type="button"
                 onClick={() => {
                   soundFx.playClick();
-                  onBack();
+                  handleFillDemo();
+                  setCurrentSubStep('shop-details');
                 }}
-                className="text-xs font-semibold text-slate-400 hover:text-white px-3 py-2 rounded-xl transition-colors"
+                className="w-full py-3.5 px-6 rounded-2xl bg-[#edf4ee] hover:bg-[#e2ede4] active:scale-[0.99] text-[#235338] font-bold text-sm transition-all shadow-xs cursor-pointer"
               >
-                ← {t('backBtn')}
+                {t('btnCreateAccount')}
               </button>
+            </div>
+          </form>
+        </div>
 
+        <div className="p-4 text-center mt-4">
+          <span className="text-xs text-[#5e7768] font-medium">
+            🔒 {t('encryptedSecurityNote')}
+          </span>
+        </div>
+
+        {renderForgotModal()}
+      </div>
+    );
+  }
+
+  // -------------------- SCREEN 2: SHOP INFO (EXACTLY MATCHING USER'S SCREENSHOT) --------------------
+  if (currentSubStep === 'shop-details' || currentSubStep === 'business-type') {
+    return (
+      <div className="w-full flex-1 flex flex-col justify-start bg-white text-slate-800 animate-fade-in relative selection:bg-emerald-600 selection:text-white pb-8 sm:pb-12">
+        {/* Responsive Centered Shell for Laptop, Desktop, Tablet, and Mobile */}
+        <div className="w-full max-w-md sm:max-w-xl lg:max-w-2xl mx-auto bg-white sm:my-6 sm:rounded-3xl sm:shadow-xl sm:border sm:border-[#dce8e0] overflow-hidden flex flex-col">
+          {/* Solid Forest Green Curved Header */}
+          <div className="w-full bg-[#0b4d2c] pt-5 sm:pt-7 pb-2 px-5 sm:px-7 text-white relative">
+            <div className="flex flex-col items-start">
+              {/* Back Arrow */}
               <button
                 type="button"
-                onClick={handleFillDemo}
-                className="sm:hidden text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20"
+                onClick={() => {
+                  soundFx.playClick();
+                  setCurrentSubStep('credentials');
+                }}
+                className="p-1 -ml-1 text-white hover:text-emerald-200 transition-colors cursor-pointer mb-3"
+                title={t('backBtn')}
               >
-                {t('demoAutoFillOwner')}
+                <ArrowLeft className="w-6 h-6 stroke-[2.5]" />
               </button>
-            </div>
-          </div>
-        </form>
-      )}
 
-      {/* -------------------- SCREEN 2 OF 4: OWNER & SHOP DETAILS (VOICE ENABLED) -------------------- */}
-      {currentSubStep === 'shop-details' && (
-        <form onSubmit={handleNextFromDetails} className="space-y-6">
-          <div className="p-6 sm:p-7 rounded-3xl bg-slate-800/80 border-2 border-slate-700 shadow-xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-700/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-black">
-                  2
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white uppercase tracking-wider">
-                    {t('stepDetails')}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {t('speakOrTypeHint')}
-                  </p>
-                </div>
-              </div>
-
-              <span className="text-[11px] text-amber-300 font-bold bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                {t('voiceInputBadge')}
-              </span>
-            </div>
-
-            {/* Owner Name */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>{t('ownerNameLabel')} *</span>
-                <span className="text-[10px] text-slate-400">{t('speakOrTypeHint')}</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <User className="w-5 h-5" />
-                </div>
-                <input
-                  type="text"
-                  value={formData.ownerName}
-                  onChange={(e) => handleChange('ownerName', e.target.value)}
-                  placeholder={t('ownerNamePlaceholder')}
-                  className="grocery-input pl-11 pr-14 text-sm font-medium"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => handleVoiceInput('ownerName')}
-                  className={`absolute inset-y-1.5 right-1.5 px-3 rounded-xl flex items-center justify-center transition-all ${
-                    activeMicField === 'ownerName'
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30'
-                  }`}
-                  title={t('ownerNameVoicePrompt')}
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Shop Name */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>{t('shopNameLabel')} *</span>
-                <span className="text-[10px] text-slate-400">{t('speakOrTypeHint')}</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Store className="w-5 h-5" />
-                </div>
-                <input
-                  type="text"
-                  value={formData.shopName}
-                  onChange={(e) => handleChange('shopName', e.target.value)}
-                  placeholder={t('shopNamePlaceholder')}
-                  className="grocery-input pl-11 pr-14 text-sm font-medium"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleVoiceInput('shopName')}
-                  className={`absolute inset-y-1.5 right-1.5 px-3 rounded-xl flex items-center justify-center transition-all ${
-                    activeMicField === 'shopName'
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30'
-                  }`}
-                  title={t('shopNameVoicePrompt')}
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
-              </div>
+              {/* Title & Subtitle */}
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white uppercase">
+                {t('shopInfoPageTitle')}
+              </h1>
+              <p className="text-xs sm:text-sm text-emerald-100/90 font-medium mt-1">
+                {t('shopInfoPageSubtitle')}
+              </p>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              type="submit"
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-base shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group"
+          {/* Organic Wave Transition (with layered mint accent on the right) */}
+          <div className="relative w-full overflow-hidden leading-none bg-[#0b4d2c]">
+            <svg
+              viewBox="0 0 1000 80"
+              className="w-full h-8 sm:h-12 md:h-14 block"
+              preserveAspectRatio="none"
             >
-              <span>{t('stepNextBusinessType')}</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playClick();
-                setCurrentSubStep('credentials');
-              }}
-              className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>← {t('backBtn')}</span>
-            </button>
+              {/* Mint wave accent swooping on the right */}
+              <path
+                d="M 450,28 C 650,2 820,10 1000,45 L 1000,80 L 450,80 Z"
+                fill="#caeecd"
+              />
+              {/* White background curve cutting into dark green & mint wave */}
+              <path
+                d="M 0,25 C 220,55 420,52 620,38 C 760,28 880,40 1000,60 L 1000,80 L 0,80 Z"
+                fill="#ffffff"
+              />
+            </svg>
           </div>
-        </form>
-      )}
 
-      {/* -------------------- SCREEN 3 OF 4: BUSINESS TYPE SELECTION -------------------- */}
-      {currentSubStep === 'business-type' && (
-        <div className="space-y-6">
-          <div className="p-6 sm:p-7 rounded-3xl bg-slate-800/80 border-2 border-slate-700 shadow-xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-700/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-black">
-                  3
+          {/* Main Form Body */}
+          <div className="w-full px-5 sm:px-7 pt-2 pb-8 sm:pb-10 space-y-5 sm:space-y-6">
+            {/* Error Banner */}
+            {errorMessage && (
+              <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2 animate-shake">
+                <span>⚠️ {errorMessage}</span>
+              </div>
+            )}
+
+            {/* Live Voice Waveform if microphone is recording */}
+            {isListening && (
+              <div className="p-3.5 rounded-2xl bg-[#e8f5ec] border border-emerald-300 shadow-xs flex items-center justify-between gap-3 animate-pulse">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#0b4d2c] text-white flex items-center justify-center font-bold">
+                    <Mic className="w-4 h-4 animate-bounce" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#183626]">
+                      {activeMicField === 'ownerName' ? t('ownerNameVoicePrompt') : t('shopNameVoicePrompt')}
+                    </p>
+                    <p className="text-[10px] text-[#5e7768]">{t('speakClearlyHint')}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-white uppercase tracking-wider">
-                    {t('businessTypeLabel')}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {t('businessTypeDesc')}
-                  </p>
+                <div className="flex items-center gap-1 h-5">
+                  <span className="w-1 bg-[#0b4d2c] rounded-full animate-wave-1"></span>
+                  <span className="w-1 bg-[#0b4d2c] rounded-full animate-wave-2"></span>
+                  <span className="w-1 bg-[#0b4d2c] rounded-full animate-wave-3"></span>
+                  <span className="w-1 bg-[#0b4d2c] rounded-full animate-wave-4"></span>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleNextFromDetails} className="space-y-5 sm:space-y-6">
+              {/* Field 1: Owner's Full Name */}
+              <div>
+                <label className="block text-sm sm:text-base font-bold text-[#183626] mb-1.5 flex items-center">
+                  <span>{t('ownerFullNameLabel')}</span>
+                  <span className="text-red-500 ml-1 font-bold">*</span>
+                </label>
+                <div className="relative flex items-center bg-white border border-[#d6e3db] rounded-2xl shadow-2xs hover:border-[#a8cbba] focus-within:border-[#0b4d2c] focus-within:ring-2 focus-within:ring-[#0b4d2c]/15 transition-all">
+                  <div className="pl-3.5 pr-2.5 text-[#183626] flex items-center justify-center pointer-events-none">
+                    <User className="w-5 h-5 stroke-[2]" />
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.ownerName}
+                    onChange={(e) => handleChange('ownerName', e.target.value)}
+                    placeholder={t('ownerFullNamePlaceholder')}
+                    className="w-full py-3.5 pr-2 bg-transparent text-sm sm:text-base font-medium text-[#183626] placeholder-[#9caea4] outline-none"
+                    autoFocus
+                  />
+                  <div className="pr-2.5 pl-1">
+                    <button
+                      type="button"
+                      onClick={() => handleVoiceInput('ownerName')}
+                      className={`p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                        activeMicField === 'ownerName'
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'bg-[#e8f5ec] hover:bg-[#d6eedc] text-[#0b4d2c]'
+                      }`}
+                      title={t('ownerNameVoicePrompt')}
+                    >
+                      <Mic className="w-5 h-5 stroke-[2]" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                🔊 {t('audioGuide')}
-              </span>
-            </div>
+              {/* Field 2: Shop / Store Name */}
+              <div>
+                <label className="block text-sm sm:text-base font-bold text-[#183626] mb-1.5 flex items-center">
+                  <span>{t('shopStoreNameLabel')}</span>
+                  <span className="text-red-500 ml-1 font-bold">*</span>
+                </label>
+                <div className="relative flex items-center bg-white border border-[#d6e3db] rounded-2xl shadow-2xs hover:border-[#a8cbba] focus-within:border-[#0b4d2c] focus-within:ring-2 focus-within:ring-[#0b4d2c]/15 transition-all">
+                  <div className="pl-3.5 pr-2.5 text-[#183626] flex items-center justify-center pointer-events-none">
+                    <Store className="w-5 h-5 stroke-[2]" />
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.shopName}
+                    onChange={(e) => handleChange('shopName', e.target.value)}
+                    placeholder={t('shopStoreNamePlaceholder')}
+                    className="w-full py-3.5 pr-2 bg-transparent text-sm sm:text-base font-medium text-[#183626] placeholder-[#9caea4] outline-none"
+                  />
+                  <div className="pr-2.5 pl-1">
+                    <button
+                      type="button"
+                      onClick={() => handleVoiceInput('shopName')}
+                      className={`p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                        activeMicField === 'shopName'
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'bg-[#e8f5ec] hover:bg-[#d6eedc] text-[#0b4d2c]'
+                      }`}
+                      title={t('shopNameVoicePrompt')}
+                    >
+                      <Mic className="w-5 h-5 stroke-[2]" />
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-            {/* 3 Business Type Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-              {businessTypesList.map((item) => {
-                const Icon = item.icon;
-                const isSelected = formData.businessType === item.id;
-                return (
+              {/* Field 3: Select Business Type */}
+              <div>
+                <label className="block text-sm sm:text-base font-bold text-[#183626] mb-3">
+                  {t('selectBusinessTypeLabel')}
+                </label>
+
+                <div className="grid grid-cols-3 gap-2 sm:gap-3.5">
+                  {/* Card 1: Small Shop */}
                   <div
-                    key={item.id}
-                    onClick={() => handleSelectBusinessType(item.id)}
+                    onClick={() => handleSelectBusinessType('small')}
                     role="button"
                     tabIndex={0}
-                    className={`cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 relative flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-emerald-400 bg-emerald-950/70 shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-400/30 scale-[1.03]'
-                        : 'border-slate-700/80 bg-slate-900/70 hover:border-slate-500'
+                    className={`relative rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between transition-all duration-200 cursor-pointer ${
+                      formData.businessType === 'small'
+                        ? 'bg-[#e9f7ee] border-2 border-[#166534] shadow-xs ring-1 ring-[#166534]/20'
+                        : 'bg-white border border-[#dce8e0] hover:border-emerald-300'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-2.5">
-                        <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                            isSelected
-                              ? 'bg-emerald-400 text-slate-950 font-bold'
-                              : 'bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        {isSelected ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                        ) : (
-                          <Volume2 className="w-4 h-4 text-slate-500 hover:text-slate-300" />
-                        )}
-                      </div>
+                    {/* Top right speaker audio button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        soundFx.playClick();
+                        speak(t('shopTypeSmallAudio'));
+                      }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#d7eedc] text-[#166534] hover:bg-[#c2e7c9] flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
+                      title={t('shopTypeSmallAudio')}
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
 
-                      <h4 className="text-sm font-bold text-white mb-1">
-                        {item.title}
+                    {/* Center avatar */}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#d7eedc] text-[#166534] flex items-center justify-center mt-3 mb-2 shrink-0">
+                      <User className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2]" />
+                    </div>
+
+                    {/* Title & Description */}
+                    <div className="text-center w-full">
+                      <h4 className="text-xs sm:text-sm font-bold text-[#183626] leading-tight">
+                        {t('shopTypeSmallTitle')}
                       </h4>
-                      <p className="text-xs text-slate-300 leading-snug">
-                        {item.desc}
+                      <p className="text-[10px] sm:text-xs text-[#486653] leading-tight mt-1 whitespace-pre-line">
+                        {t('shopTypeSmallDesc')}
                       </p>
                     </div>
 
-                    <div className="mt-3.5 pt-2.5 border-t border-slate-700/50">
-                      <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        {item.badge}
-                      </span>
+                    {/* Bottom Radio Circle */}
+                    <div className="mt-3 mb-0.5">
+                      <div
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          formData.businessType === 'small'
+                            ? 'border-[#166534]'
+                            : 'border-[#cadad0]'
+                        }`}
+                      >
+                        {formData.businessType === 'small' && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#166534]" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleNextFromBusinessType}
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-base shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group"
-            >
-              <span>{t('stepNextQuickPin')}</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playClick();
-                setCurrentSubStep('shop-details');
-              }}
-              className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>← {t('backBtn')}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* -------------------- SCREEN 4 OF 4: 4-DIGIT QUICK PIN -------------------- */}
-      {currentSubStep === 'quick-pin' && (
-        <form onSubmit={handleFinalSubmit} className="space-y-6">
-          <div className="p-6 sm:p-7 rounded-3xl bg-slate-800/80 border-2 border-slate-700 shadow-xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-700/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-black">
-                  4
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white uppercase tracking-wider">
-                    {t('quickPinTitle')}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {t('quickPinSubtitle')}
-                  </p>
-                </div>
-              </div>
-
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                ⚡ {t('quickPinPlaceholder')}
-              </span>
-            </div>
-
-            {/* 4 PIN Display Boxes */}
-            <div className="flex items-center justify-center gap-3 py-2">
-              {[0, 1, 2, 3].map((idx) => {
-                const digit = formData.quickPin[idx];
-                return (
+                  {/* Card 2: Medium Shop */}
                   <div
-                    key={idx}
-                    className={`w-14 h-16 sm:w-16 sm:h-20 rounded-2xl border-2 flex items-center justify-center text-2xl sm:text-3xl font-extrabold transition-all duration-200 ${
-                      digit
-                        ? 'border-emerald-400 bg-emerald-950/70 text-emerald-300 shadow-md shadow-emerald-500/20 scale-105'
-                        : 'border-slate-700 bg-slate-900/80 text-slate-500'
+                    onClick={() => handleSelectBusinessType('medium')}
+                    role="button"
+                    tabIndex={0}
+                    className={`relative rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between transition-all duration-200 cursor-pointer ${
+                      formData.businessType === 'medium'
+                        ? 'bg-[#e9f7ee] border-2 border-[#166534] shadow-xs ring-1 ring-[#166534]/20'
+                        : 'bg-white border border-[#dce8e0] hover:border-emerald-300'
                     }`}
                   >
-                    {digit ? '●' : ''}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Interactive PIN Numpad */}
-            <div className="max-w-xs mx-auto grid grid-cols-3 gap-2.5 pt-1">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((btn) => {
-                if (btn === 'C') {
-                  return (
+                    {/* Top right speaker audio button */}
                     <button
-                      key={btn}
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         soundFx.playClick();
-                        handleChange('quickPin', '');
+                        speak(t('shopTypeMediumAudio'));
                       }}
-                      className="h-12 rounded-2xl bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-all"
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#d7eedc] text-[#166534] hover:bg-[#c2e7c9] flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
+                      title={t('shopTypeMediumAudio')}
                     >
-                      {t('clearBtn')}
+                      <Volume2 className="w-3.5 h-3.5" />
                     </button>
-                  );
-                }
-                if (btn === '⌫') {
-                  return (
-                    <button
-                      key={btn}
-                      type="button"
-                      onClick={handlePinBackspace}
-                      className="h-12 rounded-2xl bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-all"
-                    >
-                      ⌫
-                    </button>
-                  );
-                }
-                return (
-                  <button
-                    key={btn}
-                    type="button"
-                    onClick={() => handlePinDigitPress(btn)}
-                    className="h-12 rounded-2xl bg-slate-700/80 hover:bg-emerald-600 hover:text-slate-950 text-white font-extrabold text-lg transition-all active:scale-95 shadow-sm"
+
+                    {/* Center avatar */}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#d7eedc] text-[#166534] flex items-center justify-center mt-3 mb-2 shrink-0">
+                      <Users className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2]" />
+                    </div>
+
+                    {/* Title & Description */}
+                    <div className="text-center w-full">
+                      <h4 className="text-xs sm:text-sm font-bold text-[#183626] leading-tight">
+                        {t('shopTypeMediumTitle')}
+                      </h4>
+                      <p className="text-[10px] sm:text-xs text-[#5e7768] leading-tight mt-1 whitespace-pre-line">
+                        {t('shopTypeMediumDesc')}
+                      </p>
+                    </div>
+
+                    {/* Bottom Radio Circle */}
+                    <div className="mt-3 mb-0.5">
+                      <div
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          formData.businessType === 'medium'
+                            ? 'border-[#166534]'
+                            : 'border-[#cadad0]'
+                        }`}
+                      >
+                        {formData.businessType === 'medium' && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#166534]" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Large Shop */}
+                  <div
+                    onClick={() => handleSelectBusinessType('large')}
+                    role="button"
+                    tabIndex={0}
+                    className={`relative rounded-2xl p-2.5 sm:p-3.5 flex flex-col items-center justify-between transition-all duration-200 cursor-pointer ${
+                      formData.businessType === 'large'
+                        ? 'bg-[#e9f7ee] border-2 border-[#166534] shadow-xs ring-1 ring-[#166534]/20'
+                        : 'bg-white border border-[#dce8e0] hover:border-emerald-300'
+                    }`}
                   >
-                    {btn}
-                  </button>
-                );
-              })}
-            </div>
+                    {/* Top right speaker audio button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        soundFx.playClick();
+                        speak(t('shopTypeLargeAudio'));
+                      }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#d7eedc] text-[#166534] hover:bg-[#c2e7c9] flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
+                      title={t('shopTypeLargeAudio')}
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
 
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{t('quickPinNotice')}</span>
-            </div>
-          </div>
+                    {/* Center avatar */}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#d7eedc] text-[#166534] flex items-center justify-center mt-3 mb-2 shrink-0">
+                      <Store className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2]" />
+                    </div>
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              type="submit"
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-base shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group"
-            >
-              <span>{t('stepReviewSubmit')}</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+                    {/* Title & Description */}
+                    <div className="text-center w-full">
+                      <h4 className="text-xs sm:text-sm font-bold text-[#183626] leading-tight">
+                        {t('shopTypeLargeTitle')}
+                      </h4>
+                      <p className="text-[10px] sm:text-xs text-[#5e7768] leading-tight mt-1 whitespace-pre-line">
+                        {t('shopTypeLargeDesc')}
+                      </p>
+                    </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playClick();
-                setCurrentSubStep('business-type');
-              }}
-              className="w-full py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>← {t('backBtn')}</span>
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* -------------------- FORGOT PASSWORD MODAL -------------------- */}
-      {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-md p-6 sm:p-7 rounded-3xl bg-slate-900 border-2 border-emerald-500/40 shadow-2xl space-y-5 relative">
-            <button
-              type="button"
-              onClick={handleCloseForgotModal}
-              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                <HelpCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">
-                  {t('forgotPasswordTitle')}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  {t('forgotPasswordDesc')}
-                </p>
-              </div>
-            </div>
-
-            {forgotSuccess ? (
-              <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold space-y-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <span>{t('forgotPasswordSuccess')}</span>
+                    {/* Bottom Radio Circle */}
+                    <div className="mt-3 mb-0.5">
+                      <div
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          formData.businessType === 'large'
+                            ? 'border-[#166534]'
+                            : 'border-[#cadad0]'
+                        }`}
+                      >
+                        {formData.businessType === 'large' && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#166534]" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Bottom Action Button: NEXT -> */}
+              <div className="pt-2 sm:pt-4">
                 <button
-                  type="button"
-                  onClick={handleCloseForgotModal}
-                  className="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-md"
+                  type="submit"
+                  className="w-full py-4 px-6 rounded-2xl bg-[#0b4d2c] hover:bg-[#073920] active:scale-[0.99] text-white font-extrabold text-base tracking-wider shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-2 group cursor-pointer"
                 >
-                  {t('btnClose')}
+                  <span>{t('btnNextCaps')}</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform stroke-[2.5]" />
                 </button>
               </div>
-            ) : (
-              <form onSubmit={handleSubmitForgotPassword} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                    {formData.loginMethod === 'email' ? t('emailLabel') : t('phoneLabel')}
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      {formData.loginMethod === 'email' ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-                    </div>
-                    <input
-                      type={formData.loginMethod === 'email' ? 'email' : 'tel'}
-                      value={forgotContact}
-                      onChange={(e) => setForgotContact(e.target.value)}
-                      placeholder={formData.loginMethod === 'email' ? t('emailPlaceholder') : t('phonePlaceholder')}
-                      className="grocery-input pl-10 pr-4 text-sm font-medium"
-                      required
-                      autoFocus
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>{t('btnSendResetLink')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleCloseForgotModal}
-                    className="w-full py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-                  >
-                    {t('btnClose')}
-                  </button>
-                </div>
-              </form>
-            )}
+            </form>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // -------------------- SCREEN 3: SET 4-DIGIT QUICK PIN (MATCHING USER SCREENSHOT) --------------------
+  return (
+    <div className="w-full flex-1 flex flex-col justify-start bg-white text-slate-800 animate-fade-in relative selection:bg-emerald-600 selection:text-white pb-8 sm:pb-12">
+      {/* Responsive Centered Shell for Desktop, Laptop, Tablet, and Mobile */}
+      <div className="w-full max-w-md sm:max-w-lg mx-auto bg-white sm:my-6 sm:rounded-3xl sm:shadow-xl sm:border sm:border-[#dce8e0] px-6 sm:px-8 py-5 sm:py-8 flex flex-col">
+        {/* Top Navigation Row: Back Arrow */}
+        <div className="flex items-center justify-between mb-2">
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              setCurrentSubStep('shop-details');
+            }}
+            className="p-2 -ml-2 rounded-xl text-[#0b4d2c] hover:bg-[#ecf7ef] transition-colors cursor-pointer"
+            title={t('backBtn')}
+          >
+            <ArrowLeft className="w-6 h-6 stroke-[2.5]" />
+          </button>
+        </div>
+
+        {/* Title & Subtitle */}
+        <div className="text-center px-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#0b4d2c] tracking-tight uppercase">
+            {t('quickPinTitleExact')}
+          </h1>
+          <p className="text-xs sm:text-sm text-[#55695d] font-normal mt-2 leading-relaxed max-w-xs sm:max-w-sm mx-auto whitespace-pre-line">
+            {t('quickPinSubtitleExact')}
+          </p>
+        </div>
+
+        {/* Error Alert */}
+        {errorMessage && (
+          <div className="mt-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center justify-center gap-2 animate-shake">
+            <span>⚠️ {errorMessage}</span>
+          </div>
+        )}
+
+        {/* 4 PIN Display Boxes */}
+        <div className="flex items-center justify-center gap-3.5 sm:gap-4 my-7 sm:my-8">
+          {[0, 1, 2, 3].map((idx) => {
+            const digit = formData.quickPin[idx];
+            return (
+              <div
+                key={idx}
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-[1.5px] border-[#166534] bg-white flex items-center justify-center transition-all duration-200 shadow-2xs"
+              >
+                {digit ? (
+                  <span className="w-4 h-4 rounded-full bg-[#0b4d2c] animate-scale-in" />
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Keypad Grid (3 x 4) */}
+        <div className="w-full max-w-xs sm:max-w-sm mx-auto grid grid-cols-3 gap-3 sm:gap-4 mb-7 sm:mb-8">
+          {/* Numbers 1-9 */}
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+            <button
+              key={digit}
+              type="button"
+              onClick={() => handlePinDigitPress(digit)}
+              className="h-16 sm:h-18 rounded-2xl sm:rounded-3xl bg-[#ecf7ef] hover:bg-[#ddf2e2] active:scale-95 text-[#0b4d2c] font-black text-2xl sm:text-3xl flex items-center justify-center transition-all cursor-pointer shadow-2xs select-none"
+            >
+              {digit}
+            </button>
+          ))}
+
+          {/* Row 4: Clear */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              handleChange('quickPin', '');
+            }}
+            className="h-16 sm:h-18 rounded-2xl sm:rounded-3xl bg-[#ecf7ef] hover:bg-[#ddf2e2] active:scale-95 text-[#0b4d2c] font-bold text-base sm:text-lg flex items-center justify-center transition-all cursor-pointer shadow-2xs select-none"
+          >
+            {t('btnClearExact')}
+          </button>
+
+          {/* Row 4: 0 */}
+          <button
+            type="button"
+            onClick={() => handlePinDigitPress('0')}
+            className="h-16 sm:h-18 rounded-2xl sm:rounded-3xl bg-[#ecf7ef] hover:bg-[#ddf2e2] active:scale-95 text-[#0b4d2c] font-black text-2xl sm:text-3xl flex items-center justify-center transition-all cursor-pointer shadow-2xs select-none"
+          >
+            0
+          </button>
+
+          {/* Row 4: Backspace Icon */}
+          <button
+            type="button"
+            onClick={handlePinBackspace}
+            className="h-16 sm:h-18 rounded-2xl sm:rounded-3xl bg-[#ecf7ef] hover:bg-[#ddf2e2] active:scale-95 text-[#0b4d2c] flex items-center justify-center transition-all cursor-pointer shadow-2xs select-none"
+            title="Backspace"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-7 h-7 sm:w-8 sm:h-8"
+            >
+              <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+              <line x1="18" y1="9" x2="12" y2="15" />
+              <line x1="12" y1="9" x2="18" y2="15" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Action Button: Review */}
+        <div className="w-full max-w-xs sm:max-w-sm mx-auto">
+          <button
+            type="button"
+            onClick={handleFinalSubmit}
+            className="w-full py-4 px-6 rounded-2xl sm:rounded-3xl bg-[#0b4d2c] hover:bg-[#073920] active:scale-[0.99] text-white font-bold text-lg sm:text-xl text-center shadow-lg shadow-emerald-950/20 transition-all cursor-pointer"
+          >
+            {t('btnReviewExact')}
+          </button>
+        </div>
+      </div>
+
+      {renderForgotModal()}
     </div>
   );
 };

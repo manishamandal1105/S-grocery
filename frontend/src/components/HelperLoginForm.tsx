@@ -6,7 +6,7 @@ import { ShieldAlert, Store, ArrowRight, Sparkles, Mic, Lock } from 'lucide-reac
 interface HelperLoginFormProps {
   onListeningField: (fieldName: string, onResult: (text: string) => void) => void;
   activeMicField: string | null;
-  onSuccess: (message: string, role: string) => void;
+  onSuccess: (message: string, role: string, storeName?: string) => void;
 }
 
 export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
@@ -17,6 +17,7 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
   const { t } = useLanguage();
   const [formData, setFormData] = useState<HelperLoginData>({
     storeCode: '',
+    storeName: '',
     helperEmail: '',
     passcode: '',
   });
@@ -32,6 +33,7 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
   const handleFillDemoHelper = () => {
     setFormData({
       storeCode: 'GROC-7749',
+      storeName: '',
       helperEmail: 'helper.rohit@sgrocery.com',
       passcode: '8822',
     });
@@ -60,14 +62,15 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
 
     setTimeout(() => {
       setIsLoading(false);
-      onSuccess(t('successLoginMsg'), 'helper');
-    }, 800);
+      const storeName = formData.storeName?.trim() || `Store (${formData.storeCode})`;
+      onSuccess(t('successLoginMsg'), 'helper', storeName);
+    }, 600);
   };
 
   return (
     <div className="w-full">
       <div className="mb-5">
-        <h2 className="text-xl font-bold text-slate-800">
+        <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
           {t('helperLoginTitle')}
         </h2>
         <p className="text-xs text-slate-500 mt-1">
@@ -88,7 +91,36 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+            <span>{t('shopNameLabel')} (Optional)</span>
+            <span className="text-[10px] text-slate-400">🎤 বলুন বা লিখুন</span>
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Store className="w-5 h-5" />
+            </div>
+            <input
+              type="text"
+              value={formData.storeName || ''}
+              onChange={(e) => handleChange('storeName', e.target.value)}
+              placeholder="দোকানের নাম (যেমন: Fresh Daily Mart)"
+              className="grocery-input pl-11 pr-12 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => handleVoiceInput('storeName')}
+              className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition-colors cursor-pointer ${
+                activeMicField === 'storeName' ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-emerald-600'
+              }`}
+              title="Speak store name"
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
             <span>{t('helperStoreCodeLabel')} *</span>
@@ -109,7 +141,7 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
             <button
               type="button"
               onClick={() => handleVoiceInput('storeCode')}
-              className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition-colors ${
+              className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition-colors cursor-pointer ${
                 activeMicField === 'storeCode' ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-emerald-600'
               }`}
               title="দোকান কোড বলুন"
@@ -139,7 +171,7 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
             <button
               type="button"
               onClick={() => handleVoiceInput('passcode')}
-              className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition-colors ${
+              className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition-colors cursor-pointer ${
                 activeMicField === 'passcode' ? 'text-red-500 animate-pulse' : 'text-slate-400 hover:text-emerald-600'
               }`}
               title="পাসকোড বলুন"
@@ -152,7 +184,7 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-base shadow-lg shadow-amber-600/25 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-70"
+          className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-base shadow-lg shadow-amber-600/25 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-70 cursor-pointer"
         >
           {isLoading ? (
             <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
@@ -168,12 +200,12 @@ export const HelperLoginForm: React.FC<HelperLoginFormProps> = ({
           <button
             type="button"
             onClick={handleFillDemoHelper}
-            className="text-xs font-semibold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5"
+            className="text-xs font-semibold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
             {t('demoHelperBtn')}
           </button>
-          <span className="text-[11px] text-slate-400">Helper Mode</span>
+          <span className="text-[11px] text-slate-400 font-medium">Helper Mode</span>
         </div>
       </form>
     </div>

@@ -1,731 +1,1489 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { OwnerSetupData } from '../types';
+import { OwnerSetupData, DashboardMetrics } from '../types';
+import { useSoundEffects } from '../hooks/useSoundEffects';
+import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { SalesDashboard } from './SalesDashboard';
 import {
-  ShoppingCart,
-  TrendingUp,
-  Package,
-  AlertTriangle,
-  XCircle,
-  Clock,
-  LayoutDashboard,
-  ShoppingBag,
-  BarChart2,
-  MoreHorizontal,
-  Mic,
+  Menu,
+  Search,
   Bell,
+  ChevronDown,
   ChevronRight,
-  Plus,
-  Users,
-  Boxes,
-  ArrowUpRight,
-  ArrowDownRight,
-  Store,
-  Wallet,
-  RefreshCw,
-  Sun,
-  Moon,
-  Sparkles,
   Calendar,
-  Filter
+  ShoppingCart,
+  Wallet,
+  Clock,
+  Home,
+  ShoppingBag,
+  PieChart,
+  LayoutGrid,
+  X,
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  ArrowUpRight,
+  ArrowDown,
+  CheckCircle2,
+  Layers,
+  TrendingUp,
+  PackageCheck,
+  AlertCircle,
+  Check,
+  Moon,
+  Sun,
+  Globe,
+  User,
+  MapPin,
+  Phone,
+  Lock,
+  Eye,
+  EyeOff,
+  Building,
+  Edit3,
+  Palette
 } from 'lucide-react';
 
 interface OwnerDashboardProps {
   data: OwnerSetupData;
   onReset: () => void;
+  initialMetrics?: Partial<DashboardMetrics>;
 }
 
-// Tiny SVG Sparkline
-const Sparkline: React.FC<{ points: string; color: string }> = ({ points, color }) => (
-  <svg viewBox="0 0 80 30" className="w-20 h-7" preserveAspectRatio="none">
-    <polyline
-      points={points}
-      fill="none"
-      stroke={color}
-      strokeWidth="2.2"
-      strokeLinejoin="round"
-      strokeLinecap="round"
+// Crisp Vector Storefront Graphic matching the reference design
+const StorefrontLogo: React.FC<{ className?: string }> = ({ className = "w-7 h-7 sm:w-8 sm:h-8" }) => (
+  <svg viewBox="0 0 64 64" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Foundation & Base */}
+    <rect x="6" y="52" width="52" height="6" rx="2" fill="#cbd5e1" />
+    <rect x="10" y="55" width="44" height="3" rx="1" fill="#94a3b8" />
+
+    {/* Storefront Wall */}
+    <rect x="9" y="22" width="46" height="31" fill="#fffbeb" stroke="#fcd34d" strokeWidth="1.5" />
+
+    {/* Green Plants on Side */}
+    <circle cx="8" cy="45" r="4.5" fill="#10b981" />
+    <circle cx="56" cy="45" r="4.5" fill="#10b981" />
+    <circle cx="9" cy="40" r="3" fill="#059669" />
+    <circle cx="55" cy="40" r="3" fill="#059669" />
+
+    {/* Display Window */}
+    <rect x="13" y="29" width="16" height="19" rx="2" fill="#e0f2fe" stroke="#38bdf8" strokeWidth="1.2" />
+    <line x1="13" y1="38" x2="29" y2="38" stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="1.5 1.5" />
+    <circle cx="17" cy="34" r="2" fill="#ef4444" />
+    <circle cx="25" cy="34" r="2" fill="#f97316" />
+    <circle cx="21" cy="44" r="2.2" fill="#10b981" />
+
+    {/* Store Door */}
+    <rect x="33" y="27" width="18" height="25" rx="2" fill="#fef3c7" stroke="#d97706" strokeWidth="1.2" />
+    <rect x="36" y="30" width="12" height="10" rx="1.5" fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.8" />
+    <circle cx="47" cy="41" r="1.5" fill="#b45309" />
+
+    {/* Striped Canopy Awning */}
+    <path
+      d="M5 15 L11 24 L17 15 L23 24 L29 15 L35 24 L41 15 L47 24 L53 15 L59 23 L61 19 L57 11 H7 L3 19 Z"
+      fill="#ef4444"
     />
+    <path
+      d="M11 15 L17 24 L23 15 M29 15 L35 24 L41 15 M47 15 L53 24 L57 16"
+      stroke="#ffffff"
+      strokeWidth="5"
+      strokeLinecap="butt"
+    />
+    {/* Scalloped Awning Fringe */}
+    <path
+      d="M5 23 Q8 26 11 23 Q14 26 17 23 Q20 26 23 23 Q26 26 29 23 Q32 26 35 23 Q38 26 41 23 Q44 26 47 23 Q50 26 53 23 Q56 26 59 23"
+      fill="none"
+      stroke="#b91c1c"
+      strokeWidth="1.8"
+    />
+
+    {/* Signboard Header */}
+    <rect x="8" y="8" width="48" height="6" rx="2" fill="#b91c1c" />
+    <rect x="12" y="10" width="40" height="2" rx="1" fill="#fecaca" opacity="0.8" />
   </svg>
 );
 
-interface StatCardProps {
-  label: string;
-  value: string;
-  change: string;
-  positive: boolean;
-  icon: React.ReactNode;
-  iconBg: string;
-  sparkPoints: string;
-  sparkColor: string;
-  isDark: boolean;
-}
+// Default Zero Balances & Quantities:
+// Strictly initialized to 0 for Profit/Loss, Sales, Purchases, Expenses, and all inventory/stock counts
+const defaultZeroMetrics: DashboardMetrics = {
+  todaySales: 0,
+  todayPurchases: 0,
+  todayExpenses: 0,
+  todayProfitLoss: 0,
+  salesGrowth: 0,
+  purchasesGrowth: 0,
+  expensesGrowth: 0,
+  profitLossGrowth: 0,
+  outOfStockCount: 0,
+  lowStockCount: 0,
+  expiringCount: 0,
+  hourlySales: [
+    { time: '6 AM', amount: 0 },
+    { time: '9 AM', amount: 0 },
+    { time: '12 PM', amount: 0 },
+    { time: '3 PM', amount: 0 },
+    { time: '6 PM', amount: 0 },
+    { time: '9 PM', amount: 0 },
+  ],
+};
 
-const StatCard: React.FC<StatCardProps> = ({
-  label,
-  value,
-  change,
-  positive,
-  icon,
-  iconBg,
-  sparkPoints,
-  sparkColor,
-  isDark,
-}) => (
-  <div
-    className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex flex-col justify-between hover:shadow-md ${
-      isDark
-        ? 'bg-slate-800/80 border-slate-700/60 hover:border-emerald-500/40'
-        : 'bg-white border-slate-200/80 shadow-xs hover:border-emerald-300 hover:shadow-emerald-500/5'
-    }`}
-  >
-    <div className="flex items-center justify-between mb-3">
-      <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shadow-xs`}>
-        {icon}
-      </div>
-      <Sparkline points={sparkPoints} color={sparkColor} />
-    </div>
+// Reference data for developer preview when testing backend data feeding
+const backendSampleMetrics: DashboardMetrics = {
+  todaySales: 12450,
+  todayPurchases: 6200,
+  todayExpenses: 1200,
+  todayProfitLoss: 3150,
+  salesGrowth: 18,
+  purchasesGrowth: 12,
+  expensesGrowth: 5,
+  profitLossGrowth: 28,
+  outOfStockCount: 3,
+  lowStockCount: 8,
+  expiringCount: 5,
+  hourlySales: [
+    { time: '6 AM', amount: 150 },
+    { time: '9 AM', amount: 1100 },
+    { time: '12 PM', amount: 1650 },
+    { time: '3 PM', amount: 2150 },
+    { time: '6 PM', amount: 2150 },
+    { time: '9 PM', amount: 3000 },
+  ],
+};
 
-    <div>
-      <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-        {label}
-      </p>
-      <p className={`text-xl sm:text-2xl font-black tracking-tight mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-        {value}
-      </p>
-    </div>
+export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
+  data,
+  onReset,
+  initialMetrics,
+}) => {
+  const { language, setLanguage, t } = useLanguage();
+  const soundFx = useSoundEffects();
+  const { speak } = useVoiceAssistant();
 
-    <div className="mt-2.5 pt-2 border-t border-slate-100/60 flex items-center justify-between">
-      <div
-        className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-          positive
-            ? isDark
-              ? 'bg-emerald-500/15 text-emerald-400'
-              : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-            : isDark
-            ? 'bg-red-500/15 text-red-400'
-            : 'bg-rose-50 text-rose-700 border border-rose-200/60'
-        }`}
-      >
-        {positive ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-        <span>{change}</span>
-      </div>
-      <span className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-        vs yesterday
-      </span>
-    </div>
-  </div>
-);
-
-export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ data, onReset }) => {
-  const { language } = useLanguage();
+  // Active Tab: 'home' | 'sales' | 'reports' | 'more'
   const [activeTab, setActiveTab] = useState<'home' | 'sales' | 'reports' | 'more'>('home');
-  const [micActive, setMicActive] = useState(false);
-  // Default to white theme as requested by user
-  const [isDark, setIsDark] = useState(false);
 
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (language === 'bn') {
-      if (hour < 12) return 'শুভ সকাল';
-      if (hour < 17) return 'শুভ দুপুর';
-      return 'শুভ সন্ধ্যা';
-    }
-    if (language === 'hi') {
-      if (hour < 12) return 'सुप्रभात';
-      if (hour < 17) return 'शुभ दोपहर';
-      return 'शुभ संध्या';
-    }
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
-  const today = new Date().toLocaleDateString(language === 'bn' ? 'bn-BD' : language === 'hi' ? 'hi-IN' : 'en-IN', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    weekday: 'long',
+  // Metrics State: initialized with all 0 values by default as instructed
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    ...defaultZeroMetrics,
+    ...initialMetrics,
   });
 
-  const bestSelling = [
-    { name: 'Miniket Rice 5kg', nameBn: 'মিনিকেট চাল ৫ কেজি', sold: 24, img: '🌾', price: '৳340' },
-    { name: 'Fresh Sunflower Oil', nameBn: 'সূর্যমুখী তেল ১লি', sold: 18, img: '🛢️', price: '৳195' },
-    { name: 'Parle-G Biscuit Pack', nameBn: 'পার্লে-জি বিস্কুট প্যাক', sold: 15, img: '🍪', price: '৳45' },
-    { name: 'Farm Fresh Eggs (12)', nameBn: 'ফার্মের ডিম (১২ পিস)', sold: 12, img: '🥚', price: '৳155' },
-  ];
+  // Developer Backend Preview Mode toggle (allows switching between 0-state and live sample values)
+  const [isDemoDataActive, setIsDemoDataActive] = useState<boolean>(false);
 
-  const alerts = [
-    {
-      icon: <AlertTriangle className="w-4 h-4 text-amber-600" />,
-      text: '৮টি পণ্যের স্টক কমে এসেছে (Low Stock)',
-      textEn: '8 products are low in stock',
-      action: 'Reorder',
-      badgeClass: isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50/90 border-amber-200 text-amber-900',
-    },
-    {
-      icon: <XCircle className="w-4 h-4 text-rose-600" />,
-      text: '৩টি পণ্য স্টক শেষ (Out of Stock)',
-      textEn: '3 products are out of stock',
-      action: 'Add Now',
-      badgeClass: isDark ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-rose-50/90 border-rose-200 text-rose-900',
-    },
-    {
-      icon: <Clock className="w-4 h-4 text-sky-600" />,
-      text: '৫টি পণ্যের মেয়াদ দ্রুত শেষ হতে যাচ্ছে (Expiring Soon)',
-      textEn: '5 products are expiring soon',
-      action: 'Discount',
-      badgeClass: isDark ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' : 'bg-sky-50/90 border-sky-200 text-sky-900',
-    },
-  ];
+  // Modals & Drawers
+  const [showMenuDrawer, setShowMenuDrawer] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAttentionItem, setSelectedAttentionItem] = useState<'out_of_stock' | 'low_stock' | 'expiring_soon' | null>(null);
 
-  const quickActions = [
-    {
-      icon: <ShoppingCart className="w-5 h-5 text-emerald-700" />,
-      label: 'নতুন বিক্রয় (Sale)',
-      labelEn: 'New Sale',
-      bgLight: 'bg-emerald-50/80 hover:bg-emerald-100/90 text-emerald-950 border-emerald-200/80',
-      bgDark: 'bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border-emerald-500/30',
-      iconBox: 'bg-emerald-500 text-slate-950',
-    },
-    {
-      icon: <Plus className="w-5 h-5 text-blue-700" />,
-      label: 'স্টক যোগ করুন',
-      labelEn: 'Add Stock',
-      bgLight: 'bg-blue-50/80 hover:bg-blue-100/90 text-blue-950 border-blue-200/80',
-      bgDark: 'bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 border-blue-500/30',
-      iconBox: 'bg-blue-500 text-white',
-    },
-    {
-      icon: <Boxes className="w-5 h-5 text-amber-700" />,
-      label: 'পণ্য তালিকা',
-      labelEn: 'Products',
-      bgLight: 'bg-amber-50/80 hover:bg-amber-100/90 text-amber-950 border-amber-200/80',
-      bgDark: 'bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border-amber-500/30',
-      iconBox: 'bg-amber-500 text-slate-950',
-    },
-    {
-      icon: <Users className="w-5 h-5 text-purple-700" />,
-      label: 'কাস্টমার খাতা',
-      labelEn: 'Customers',
-      bgLight: 'bg-purple-50/80 hover:bg-purple-100/90 text-purple-950 border-purple-200/80',
-      bgDark: 'bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 border-purple-500/30',
-      iconBox: 'bg-purple-500 text-white',
-    },
-  ];
+  // Dynamic Current Date calculation: Uses real current calendar date
+  const [currentDateFormatted, setCurrentDateFormatted] = useState<string>('');
+  const [currentGreeting, setCurrentGreeting] = useState<string>('');
+
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      const day = now.getDate();
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      const weekdayNames = [
+        'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+      ];
+
+      const month = monthNames[now.getMonth()];
+      const weekday = weekdayNames[now.getDay()];
+      const year = now.getFullYear();
+
+      setCurrentDateFormatted(`${day} ${month} ${year}, ${weekday}`);
+
+      // Time-of-day greeting
+      const hour = now.getHours();
+      let greetingPrefix = 'Good Morning';
+      if (hour >= 12 && hour < 17) greetingPrefix = 'Good Afternoon';
+      else if (hour >= 17) greetingPrefix = 'Good Evening';
+
+      const ownerFirstName = data.ownerName ? data.ownerName.trim().split(' ')[0] : 'Rina';
+      setCurrentGreeting(`${greetingPrefix}, ${ownerFirstName} 👋`);
+    };
+
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 60000);
+    return () => clearInterval(interval);
+  }, [data.ownerName]);
+
+  // Dynamic user role from login (defaults to Owner if not set)
+  const userRole = (localStorage.getItem('sgrocery_user_role') || 'owner').toLowerCase() === 'helper' ? 'Helper' : 'Owner';
+  const storeName = data.shopName || localStorage.getItem('sgrocery_store_name') || 'My Store';
+
+  // Joined date: auto-initialized to first login date and saved (Requirement 8)
+  const [joinedDate] = useState<string>(() => {
+    let saved = localStorage.getItem('sgrocery_joined_date');
+    if (!saved) {
+      const now = new Date();
+      saved = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      localStorage.setItem('sgrocery_joined_date', saved);
+    }
+    return saved;
+  });
+
+  // Store Profile State (editable fields, Requirement 9)
+  const [profileData, setProfileData] = useState({
+    shopOwner: data.ownerName || localStorage.getItem('sgrocery_owner_name') || 'Store Owner',
+    shopAddress: localStorage.getItem('sgrocery_shop_address') || '', // empty by default
+    phone: data.phone || localStorage.getItem('sgrocery_phone') || '',
+    password: data.password || localStorage.getItem('sgrocery_password') || 'password123',
+    email: data.email || localStorage.getItem('sgrocery_email') || 'store@grocery.com',
+    businessType: data.businessType || localStorage.getItem('sgrocery_business_type') || 'small',
+  });
+
+  const [activeDrawerSection, setActiveDrawerSection] = useState<'profile' | 'language' | 'theme' | null>('profile');
+  const [showPasswordInProfile, setShowPasswordInProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+  const [isQuickEditingOwner, setIsQuickEditingOwner] = useState(false);
+  const [isQuickEditingAddress, setIsQuickEditingAddress] = useState(false);
+
+  // Theme State: 'default' | 'dark' (Requirement 11)
+  const [theme, setTheme] = useState<'default' | 'dark'>(() => {
+    return (localStorage.getItem('sgrocery_theme') as 'default' | 'dark') || 'default';
+  });
+
+  const handleSelectTheme = (selectedTheme: 'default' | 'dark') => {
+    setTheme(selectedTheme);
+    localStorage.setItem('sgrocery_theme', selectedTheme);
+    soundFx.playClick();
+  };
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const handleSaveProfile = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    soundFx.playSuccessCelebration();
+    localStorage.setItem('sgrocery_owner_name', profileData.shopOwner);
+    localStorage.setItem('sgrocery_shop_address', profileData.shopAddress);
+    localStorage.setItem('sgrocery_phone', profileData.phone);
+    localStorage.setItem('sgrocery_password', profileData.password);
+    localStorage.setItem('sgrocery_email', profileData.email);
+    localStorage.setItem('sgrocery_business_type', profileData.businessType);
+    setProfileSaveSuccess(true);
+    speak('Profile details saved successfully.');
+    setTimeout(() => setProfileSaveSuccess(false), 2500);
+  };
+
+  const ownerInitial = (profileData.shopOwner?.[0] || data.ownerName?.[0] || 'M').toUpperCase();
+
+  // Notification count: based on total attention items (or 0 when backend data is 0)
+  const notificationCount = metrics.outOfStockCount + metrics.lowStockCount + metrics.expiringCount;
 
   return (
-    <div
-      className={`w-full min-h-screen flex flex-col transition-colors duration-300 relative overflow-x-hidden ${
-        isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
-      }`}
-    >
-      {/* Background Ambient Glows */}
-      {!isDark && (
-        <>
-          <div className="fixed -top-32 -left-32 w-96 h-96 bg-emerald-200/30 rounded-full blur-3xl pointer-events-none" />
-          <div className="fixed top-1/2 -right-32 w-80 h-80 bg-teal-200/25 rounded-full blur-3xl pointer-events-none" />
-        </>
-      )}
+    <div className={`w-full min-h-screen flex flex-col justify-between selection:bg-emerald-600 selection:text-white transition-colors duration-200 ${
+      theme === 'dark' ? 'dark bg-slate-900 text-slate-100' : 'bg-[#f8faf9] text-slate-800'
+    }`}>
 
-      {/* TOP HEADER */}
-      <header
-        className={`sticky top-0 z-30 px-4 py-3.5 border-b backdrop-blur-xl transition-colors ${
-          isDark
-            ? 'bg-slate-950/90 border-slate-800/80'
-            : 'bg-white/90 border-slate-200/80 shadow-xs'
-        }`}
-      >
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          {/* Brand & Store Name */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-md shadow-emerald-500/20 text-slate-950">
-              <Store className="w-5 h-5" />
-            </div>
-            <div>
+      {/* ==================== 1. FULL-SCREEN TOP APP BAR ==================== */}
+      <header className={`w-full border-b sticky top-0 z-30 shadow-2xs transition-colors ${
+        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200/80 text-slate-800'
+      }`}>
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+          {/* Left: Hamburger Menu + Storefront Graphic + Store Name + Dropdown Chevron */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                setShowMenuDrawer(true);
+              }}
+              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
+              title="Menu"
+            >
+              <Menu className="w-6 h-6 stroke-[2.2]" />
+            </button>
+
+            <div
+              onClick={() => {
+                soundFx.playClick();
+                setShowMenuDrawer(true);
+              }}
+              role="button"
+              tabIndex={0}
+              className="flex items-center gap-2.5 cursor-pointer group"
+            >
+              <StorefrontLogo className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 group-hover:scale-105 transition-transform" />
               <div className="flex items-center gap-1.5">
-                <h1 className={`text-base font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {data.shopName || 'সততা মুদি ভান্ডার'}
-                </h1>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  Active POS
+                <span className="text-base sm:text-lg lg:text-xl font-extrabold text-[#111827] dark:text-white tracking-tight leading-none">
+                  {storeName}
                 </span>
+                <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400 stroke-[2.5]" />
               </div>
-              <p className={`text-xs mt-0.5 font-medium flex items-center gap-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                <span>মালিক: {data.ownerName || 'রহিম মিয়া'}</span>
-                <span>•</span>
-                <span className="text-emerald-600 font-bold">GROC-8821</span>
-              </p>
             </div>
           </div>
 
-          {/* Right Header Controls: Theme Toggle + Notifications + Avatar */}
-          <div className="flex items-center gap-2">
-            {/* Theme Toggle Button */}
+          {/* Right: Search + Notifications Bell (with Badge) + User Avatar "R" */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={() => setIsDark(!isDark)}
-              className={`p-2 rounded-xl border transition-all ${
-                isDark
-                  ? 'bg-slate-800 text-amber-300 border-slate-700 hover:bg-slate-700'
-                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200/70 shadow-xs'
-              }`}
-              title={isDark ? 'Switch to White Theme' : 'Switch to Dark Theme'}
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                setShowSearchModal(true);
+              }}
+              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
+              title="Search"
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-slate-700" />}
+              <Search className="w-5 h-5 stroke-[2]" />
             </button>
 
-            {/* Notifications */}
             <button
-              className={`relative p-2 rounded-xl border transition-all ${
-                isDark
-                  ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-300'
-                  : 'bg-slate-100 border-slate-200 hover:bg-slate-200/70 text-slate-600 shadow-xs'
-              }`}
-              aria-label="Notifications"
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                setShowNotifications(true);
+              }}
+              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors relative cursor-pointer"
+              title="Notifications"
             >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />
+              <Bell className="w-5 h-5 stroke-[2]" />
+              {/* Notification Badge */}
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ff3b30] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center ring-2 ring-white shadow-xs">
+                {notificationCount}
+              </span>
             </button>
 
-            {/* Avatar Pill */}
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-sm font-black shadow-sm">
-              {(data.ownerName?.[0] || 'O').toUpperCase()}
-            </div>
+            {/* Owner Green Avatar Badge */}
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                setShowMenuDrawer(true);
+              }}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#008744] text-white font-extrabold text-sm sm:text-base flex items-center justify-center shadow-xs hover:scale-105 transition-transform cursor-pointer"
+              title={profileData.shopOwner || 'Owner'}
+            >
+              {ownerInitial}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* SCROLLABLE DASHBOARD BODY */}
-      <main className="flex-1 max-w-4xl w-full mx-auto pb-28 px-3.5 sm:px-6 pt-4 sm:pt-6 space-y-6">
+      {/* ==================== 2. RESPONSIVE FULL-SCREEN MAIN BODY ==================== */}
+      {activeTab === 'sales' ? (
+        <main className="w-full flex-1 max-w-7xl mx-auto px-2 sm:px-4 py-4 pb-28 animate-fadeIn">
+          <SalesDashboard storeName={storeName} onBackToHome={() => setActiveTab('home')} />
+        </main>
+      ) : (
+        <main className="w-full flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 pb-28">
 
-        {/* HERO GREETING BANNER */}
-        <div
-          className={`relative rounded-3xl overflow-hidden p-5 sm:p-7 transition-all ${
-            isDark
-              ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 border border-slate-700/60 text-white shadow-xl'
-              : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-xl shadow-emerald-600/20'
-          }`}
-        >
-          <div className="flex items-center justify-between gap-4 relative z-10">
-            <div className="space-y-2 flex-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-emerald-100 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>দৈনিক সারসংক্ষেপ (Store Summary)</span>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
-                {greeting()}, {data.ownerName?.split(' ')[0] || 'মালিক'} 👋
-              </h2>
-
-              <p className="text-xs sm:text-sm text-emerald-100 max-w-md font-medium">
-                আজকের দোকানে বিক্রি ও স্টকের সার্বিক তথ্য নিচে দেখুন।
-              </p>
-
-              <div className="inline-flex items-center gap-1.5 pt-1 text-xs text-emerald-100/90 font-semibold">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{today}</span>
-              </div>
-            </div>
-
-            {/* 3D Store Icon */}
-            <div className="hidden sm:flex flex-col items-center justify-center w-24 h-24 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 shadow-lg text-4xl">
-              <span>🏪</span>
-              <span className="text-[10px] font-extrabold text-white mt-1">OPEN NOW</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 MAIN STAT CARDS (2x2) */}
-        <div>
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className={`text-sm font-extrabold tracking-wide uppercase ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              আজকের আয় ও ব্যয় (Financial Overview)
-            </h3>
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              রিয়েল-টাইম হিসেব
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard
-              label="আজকের বিক্রি (Sales)"
-              value="৳১২,৪৫০"
-              change="↑ ১৮%"
-              positive={true}
-              icon={<ShoppingBag className="w-5 h-5 text-emerald-600" />}
-              iconBg={isDark ? 'bg-emerald-500/20' : 'bg-emerald-100 text-emerald-700'}
-              sparkPoints="0,25 10,20 20,22 30,14 40,16 50,10 60,7 70,5 80,2"
-              sparkColor="#059669"
-              isDark={isDark}
-            />
-
-            <StatCard
-              label="আজকের ক্রয় (Purchase)"
-              value="৳৬,২০০"
-              change="↑ ১২%"
-              positive={true}
-              icon={<ShoppingCart className="w-5 h-5 text-blue-600" />}
-              iconBg={isDark ? 'bg-blue-500/20' : 'bg-blue-100 text-blue-700'}
-              sparkPoints="0,28 10,22 20,24 30,18 40,20 50,15 60,12 70,9 80,6"
-              sparkColor="#2563eb"
-              isDark={isDark}
-            />
-
-            <StatCard
-              label="আজকের খরচ (Expense)"
-              value="৳১,২০০"
-              change="↓ ৫%"
-              positive={false}
-              icon={<Wallet className="w-5 h-5 text-amber-600" />}
-              iconBg={isDark ? 'bg-amber-500/20' : 'bg-amber-100 text-amber-700'}
-              sparkPoints="0,5 10,8 20,6 30,12 40,10 50,15 60,13 70,18 80,20"
-              sparkColor="#d97706"
-              isDark={isDark}
-            />
-
-            <StatCard
-              label="আজকের লাভ (Net Profit)"
-              value="৳৩,১৫০"
-              change="↑ ২৮%"
-              positive={true}
-              icon={<TrendingUp className="w-5 h-5 text-purple-600" />}
-              iconBg={isDark ? 'bg-purple-500/20' : 'bg-purple-100 text-purple-700'}
-              sparkPoints="0,25 10,22 20,18 30,15 40,12 50,10 60,7 70,4 80,2"
-              sparkColor="#9333ea"
-              isDark={isDark}
-            />
-          </div>
-        </div>
-
-        {/* STOCK SUMMARY ROW */}
-        <div
-          className={`p-4 sm:p-5 rounded-3xl border transition-all ${
-            isDark
-              ? 'bg-slate-800/80 border-slate-700/70'
-              : 'bg-white border-slate-200/80 shadow-xs'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className={`text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                স্টক সারসংক্ষেপ (Stock Status)
-              </h3>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                ইনভেন্টরি পণ্য ও সতর্কতা তালিকা
-              </p>
-            </div>
-            <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5 transition-colors">
-              সব স্টক দেখুন <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              {
-                value: '১২৮',
-                label: 'মোট পণ্য (Total)',
-                icon: <Package className="w-5 h-5 text-emerald-600" />,
-                bg: isDark ? 'bg-emerald-950/40 border-emerald-500/30' : 'bg-emerald-50/90 border-emerald-200/70 text-emerald-950',
-                textVal: isDark ? 'text-white' : 'text-emerald-950',
-              },
-              {
-                value: '৮',
-                label: 'কম স্টক (Low Stock)',
-                icon: <AlertTriangle className="w-5 h-5 text-amber-600" />,
-                bg: isDark ? 'bg-amber-950/40 border-amber-500/30' : 'bg-amber-50/90 border-amber-200/70 text-amber-950',
-                textVal: isDark ? 'text-white' : 'text-amber-950',
-              },
-              {
-                value: '৩',
-                label: 'স্টক শেষ (Out)',
-                icon: <XCircle className="w-5 h-5 text-rose-600" />,
-                bg: isDark ? 'bg-red-950/40 border-red-500/30' : 'bg-rose-50/90 border-rose-200/70 text-rose-950',
-                textVal: isDark ? 'text-white' : 'text-rose-950',
-              },
-              {
-                value: '৫',
-                label: 'মেয়াদ শেষ (Expiring)',
-                icon: <Clock className="w-5 h-5 text-sky-600" />,
-                bg: isDark ? 'bg-blue-950/40 border-blue-500/30' : 'bg-sky-50/90 border-sky-200/70 text-sky-950',
-                textVal: isDark ? 'text-white' : 'text-sky-950',
-              },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className={`rounded-2xl border p-3.5 flex flex-col items-center text-center gap-1.5 transition-all hover:scale-[1.02] ${s.bg}`}
-              >
-                <div className="p-2 rounded-xl bg-white/80 shadow-xs">
-                  {s.icon}
+          {/* GREETING CARD (Dynamic Time-based Greeting & Dynamic Current Date) */}
+          <section className={`w-full border rounded-2xl sm:rounded-3xl p-5 sm:p-6 transition-all shadow-xs ${
+            theme === 'dark' ? 'bg-slate-800/80 border-slate-700/80 text-white' : 'bg-[#ebf7ee] border-emerald-100/70 text-slate-800'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight">
+                  {currentGreeting}
+                </h1>
+                <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
+                  <Calendar className="w-4 h-4 text-slate-600 dark:text-slate-400 shrink-0" />
+                  <span>{currentDateFormatted}</span>
                 </div>
-                <p className={`text-xl font-black ${s.textVal}`}>{s.value}</p>
-                <p className={`text-[11px] font-semibold leading-tight ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {s.label}
+              </div>
+            </div>
+          </section>
+
+          {/* 4 MAIN STAT CARDS (Responsive: 1-col on mobile, 2-col on tablet, 4-col across on desktop/laptop) */}
+          <section className="w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+
+              {/* Card 1: Today's Sales */}
+              <div className="bg-[#edf8f1] border border-[#dcf2e4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00c569] text-white flex items-center justify-center font-bold text-2xl shadow-xs shrink-0">
+                      ₹
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Sales
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todaySales.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#daf5e3] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 17 L8 11 L14 14 L23 4"
+                        fill="none"
+                        stroke="#00c569"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <polyline
+                        points="17 4 23 4 23 10"
+                        fill="none"
+                        stroke="#00c569"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-emerald-950/5">
+                  <span className="font-bold text-[#00c569] flex items-center">
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.salesGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
+                </div>
+              </div>
+
+              {/* Card 2: Today's Purchases */}
+              <div className="bg-[#eef6fe] border border-[#d8eafc] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0084ff] text-white flex items-center justify-center shadow-xs shrink-0">
+                      <ShoppingCart className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Purchases
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todayPurchases.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#dff0ff] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 17 L8 11 L14 14 L23 4"
+                        fill="none"
+                        stroke="#0084ff"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <polyline
+                        points="17 4 23 4 23 10"
+                        fill="none"
+                        stroke="#0084ff"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-blue-950/5">
+                  <span className="font-bold text-[#0084ff] flex items-center">
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.purchasesGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
+                </div>
+              </div>
+
+              {/* Card 3: Today's Expenses */}
+              <div className="bg-[#fff6ec] border border-[#fde8d4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#ff8000] text-white flex items-center justify-center shadow-xs shrink-0">
+                      <Wallet className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Expenses
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todayExpenses.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#ffeed9] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 13 L7 17 L13 9 L19 14 L25 5"
+                        fill="none"
+                        stroke="#ff8000"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-amber-950/5">
+                  <span className="font-bold text-[#ff8000] flex items-center">
+                    <ArrowDown className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.expensesGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
+                </div>
+              </div>
+
+              {/* Card 4: Today's Profit/Loss (Default 0 as instructed) */}
+              <div className="bg-[#f8f2fe] border border-[#ecdcff] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#8a2be2] text-white flex items-center justify-center shadow-xs shrink-0">
+                      {/* 3 Bar Chart Icon */}
+                      <div className="flex items-end gap-1 h-5">
+                        <span className="w-1.5 bg-white rounded-xs h-2.5"></span>
+                        <span className="w-1.5 bg-white rounded-xs h-5"></span>
+                        <span className="w-1.5 bg-white rounded-xs h-3.5"></span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Profit/Loss
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todayProfitLoss.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#f3e8ff] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 16 L8 12 L13 15 L18 8 L24 10"
+                        fill="none"
+                        stroke="#8a2be2"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-purple-950/5">
+                  <span className="font-bold text-[#8a2be2] flex items-center">
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.profitLossGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          {/* ==================== 3. SPLIT SECTION ON DESKTOP: CHART (LEFT) & ATTENTION (RIGHT) ==================== */}
+          <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+
+            {/* LEFT: DAILY SALES OVERVIEW (CHART) - Occupies 7 columns on Desktop */}
+            <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-[#111827]">
+                    Daily Sales Overview
+                  </h2>
+                  <p className="text-xs text-[#6b7280] font-normal mt-0.5">
+                    Real-time Hourly Performance
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    setActiveTab('reports');
+                  }}
+                  className="text-xs sm:text-sm font-semibold text-[#1877f2] hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  <span>View Report</span>
+                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Total Sales Value */}
+              <div className="mt-3 mb-4">
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
+                  ₹{metrics.todaySales.toLocaleString()}
+                </p>
+                <p className="text-xs text-[#6b7280] font-normal mt-0.5">
+                  Total Sales Today
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* QUICK ACTIONS ROW */}
-        <div>
-          <h3 className={`text-sm font-extrabold tracking-wide uppercase mb-3 px-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-            কুইক একশন (Quick Actions)
-          </h3>
+              {/* Responsive Line Chart SVG */}
+              <div className="w-full pt-2">
+                <svg viewBox="0 0 500 150" className="w-full h-44 sm:h-52 overflow-visible" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00c569" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#00c569" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {quickActions.map((a) => (
-              <button
-                key={a.label}
-                className={`flex flex-col items-center gap-2.5 p-4 rounded-2xl border transition-all duration-200 hover:shadow-md active:scale-95 group ${
-                  isDark ? a.bgDark : a.bgLight
-                }`}
-              >
-                <div className={`w-11 h-11 rounded-2xl ${a.iconBox} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                  {a.icon}
+                  {/* Y-Axis Guidelines & Labels */}
+                  {/* ₹3K */}
+                  <text x="0" y="16" fill="#9ca3af" fontSize="11" fontWeight="600">₹3K</text>
+                  <line x1="38" y1="12" x2="495" y2="12" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+
+                  {/* ₹2K */}
+                  <text x="0" y="52" fill="#9ca3af" fontSize="11" fontWeight="600">₹2K</text>
+                  <line x1="38" y1="48" x2="495" y2="48" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+
+                  {/* ₹1K */}
+                  <text x="0" y="88" fill="#9ca3af" fontSize="11" fontWeight="600">₹1K</text>
+                  <line x1="38" y1="84" x2="495" y2="84" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+
+                  {/* ₹0 */}
+                  <text x="8" y="124" fill="#9ca3af" fontSize="11" fontWeight="600">₹0</text>
+                  <line x1="38" y1="120" x2="495" y2="120" stroke="#f1f5f9" strokeWidth="1.2" />
+
+                  {/* Chart Spline Line & Area */}
+                  {metrics.todaySales > 0 ? (
+                    <>
+                      <path
+                        d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12 L 495 120 L 50 120 Z"
+                        fill="url(#fullSalesGradient)"
+                      />
+                      <path
+                        d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12"
+                        fill="none"
+                        stroke="#00c569"
+                        strokeWidth="3.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      {[
+                        { cx: 50, cy: 120 },
+                        { cx: 140, cy: 94 },
+                        { cx: 220, cy: 72 },
+                        { cx: 270, cy: 78 },
+                        { cx: 325, cy: 50 },
+                        { cx: 415, cy: 50 },
+                        { cx: 495, cy: 12 },
+                      ].map((pt, i) => (
+                        <circle
+                          key={i}
+                          cx={pt.cx}
+                          cy={pt.cy}
+                          r="4"
+                          fill="#00c569"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          className="transition-all hover:scale-125"
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    // Default 0-balance horizontal baseline
+                    <>
+                      <line x1="50" y1="120" x2="495" y2="120" stroke="#00c569" strokeWidth="3" />
+                      {[50, 140, 228, 318, 406, 495].map((cx, i) => (
+                        <circle key={i} cx={cx} cy="120" r="3.5" fill="#00c569" stroke="#ffffff" strokeWidth="2.5" />
+                      ))}
+                    </>
+                  )}
+                </svg>
+
+                {/* X-Axis Time Markers */}
+                <div className="flex justify-between items-center text-xs text-[#6b7280] font-medium pt-2 pl-9 pr-1">
+                  <span>6 AM</span>
+                  <span>9 AM</span>
+                  <span>12 PM</span>
+                  <span>3 PM</span>
+                  <span>6 PM</span>
+                  <span>9 PM</span>
                 </div>
-                <span className="text-xs font-black text-center leading-tight">
-                  {a.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* NEEDS ATTENTION ALERTS */}
-        <div
-          className={`p-4 sm:p-5 rounded-3xl border transition-all ${
-            isDark
-              ? 'bg-slate-800/80 border-slate-700/70'
-              : 'bg-white border-slate-200/80 shadow-xs'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3.5">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-              <h3 className={`text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                জরুরি নোটিফিকেশন (Needs Your Attention)
-              </h3>
+              </div>
             </div>
-            <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700">
-              সব দেখুন
-            </button>
-          </div>
 
-          <div className="space-y-2.5">
-            {alerts.map((a) => (
-              <div
-                key={a.text}
-                className={`flex items-center justify-between rounded-2xl border p-3 sm:px-4 transition-all hover:shadow-xs ${a.badgeClass}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-white/80 shadow-xs">
-                    {a.icon}
-                  </div>
-                  <span className="text-xs font-bold leading-tight">
-                    {a.text}
+            {/* RIGHT: NEEDS YOUR ATTENTION - Occupies 5 columns on Desktop */}
+            <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3.5">
+                  <h2 className="text-base sm:text-lg font-bold text-[#111827]">
+                    Needs Your Attention
+                  </h2>
+                  <span className="text-xs font-semibold text-slate-500">
+                    Live Stock Status
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-white/90 text-slate-800 border border-slate-200 shadow-xs hover:bg-white transition-all">
-                    {a.action}
-                  </button>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                {/* 3 Attention Items matching the reference image */}
+                <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+                  {/* Item 1: Out of Stock */}
+                  <div
+                    onClick={() => {
+                      soundFx.playClick();
+                      setSelectedAttentionItem('out_of_stock');
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#ff4d4f] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                        <X className="w-4 h-4 stroke-[3]" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                        {metrics.outOfStockCount} products are out of stock
+                      </span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+
+                  {/* Item 2: Low Stock */}
+                  <div
+                    onClick={() => {
+                      soundFx.playClick();
+                      setSelectedAttentionItem('low_stock');
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#faad14] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                        <span className="text-base font-extrabold leading-none pb-0.5">!</span>
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                        {metrics.lowStockCount} products are low in stock
+                      </span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+
+                  {/* Item 3: Expiring Soon */}
+                  <div
+                    onClick={() => {
+                      soundFx.playClick();
+                      setSelectedAttentionItem('expiring_soon');
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#1890ff] text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
+                        <Clock className="w-4 h-4 stroke-[2.5]" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                        {metrics.expiringCount} products are expiring soon
+                      </span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          </section>
 
-        {/* CHARTS & BEST SELLING SPLIT */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Sales Chart (7 Cols) */}
-          <div
-            className={`lg:col-span-7 p-4 sm:p-5 rounded-3xl border transition-all ${
-              isDark
-                ? 'bg-slate-800/80 border-slate-700/70'
-                : 'bg-white border-slate-200/80 shadow-xs'
+        </main>
+      )}
+
+      {/* ==================== 4. FIXED BOTTOM NAVIGATION BAR (LAPTOP & MOBILE) ==================== */}
+      <nav className={`fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md border-t py-2.5 px-4 sm:px-8 shadow-2xl transition-colors ${
+        theme === 'dark' ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200/90 shadow-slate-900/15'
+      }`}>
+        <div className="max-w-md mx-auto grid grid-cols-2 gap-3 sm:gap-4">
+          {/* Tab 1: Home Page */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              setActiveTab('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+              activeTab === 'home'
+                ? 'bg-[#008744] text-white shadow-lg shadow-emerald-700/30 scale-102'
+                : theme === 'dark'
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <div>
-                <h3 className={`text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  আজকের বিক্রি প্রবণতা (Hourly Sales)
-                </h3>
-                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  প্রতি ঘণ্টার বিক্রয় গ্রাফ
-                </p>
+            <Home className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+            <span>Home Page</span>
+          </button>
+
+          {/* Tab 2: Sales */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              setActiveTab('sales');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+              activeTab === 'sales'
+                ? 'bg-[#008744] text-white shadow-lg shadow-emerald-700/30 scale-102'
+                : theme === 'dark'
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+            <span>Sales</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* ==================== 5. SLIDE-OUT NAVIGATION DRAWER ==================== */}
+      {showMenuDrawer && (
+        <div className="fixed inset-0 z-50 flex animate-fade-in">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+            onClick={() => setShowMenuDrawer(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className={`relative w-[88%] max-w-sm h-full shadow-2xl p-5 sm:p-6 flex flex-col justify-between z-10 animate-slide-right overflow-y-auto transition-colors ${
+            theme === 'dark' ? 'bg-slate-900 text-white border-r border-slate-800' : 'bg-white text-slate-800'
+          }`}>
+            <div className="space-y-4">
+              {/* Drawer Top Header (Store Name from Login & Role from Login) */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <StorefrontLogo className="w-10 h-10 shrink-0" />
+                  <div>
+                    <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
+                      {storeName}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-[#00c569] animate-pulse"></span>
+                      <span className="text-[11px] font-bold text-[#008744] dark:text-emerald-400 uppercase tracking-wider">
+                        {userRole}
+                      </span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500">• Active Store</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMenuDrawer(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5" />
-                <span>রিপোর্ট</span>
+
+              {/* Quick Details Card: Shop Owner, Shop Address, Joined (Requirement 8) */}
+              <div className={`p-3.5 rounded-2xl border space-y-2 text-xs transition-colors ${
+                theme === 'dark' ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-[#f8faf9] border-slate-200/80 text-slate-600'
+              }`}>
+                {/* Shop Owner (Editable) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-[#008744] shrink-0" />
+                    <span className="font-semibold text-slate-500 dark:text-slate-400">Shop Owner:</span>
+                  </div>
+                  {isQuickEditingOwner ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={profileData.shopOwner}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, shopOwner: e.target.value }))}
+                        className="px-2 py-0.5 rounded border border-emerald-500 bg-white dark:bg-slate-700 text-xs text-slate-900 dark:text-white max-w-[120px]"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          setIsQuickEditingOwner(false);
+                          localStorage.setItem('sgrocery_owner_name', profileData.shopOwner);
+                        }}
+                        className="p-1 rounded bg-[#008744] text-white"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-slate-800 dark:text-white">{profileData.shopOwner}</span>
+                      <button
+                        onClick={() => setIsQuickEditingOwner(true)}
+                        className="text-slate-400 hover:text-[#008744] cursor-pointer"
+                        title="Edit Shop Owner"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Shop Address (Empty by default, editable) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="font-semibold text-slate-500 dark:text-slate-400">Shop Address:</span>
+                  </div>
+                  {isQuickEditingAddress ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={profileData.shopAddress}
+                        placeholder="Enter address"
+                        onChange={(e) => setProfileData(prev => ({ ...prev, shopAddress: e.target.value }))}
+                        className="px-2 py-0.5 rounded border border-amber-500 bg-white dark:bg-slate-700 text-xs text-slate-900 dark:text-white max-w-[130px]"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          setIsQuickEditingAddress(false);
+                          localStorage.setItem('sgrocery_shop_address', profileData.shopAddress);
+                        }}
+                        className="p-1 rounded bg-[#008744] text-white"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[140px]">
+                        {profileData.shopAddress || <span className="text-slate-400 italic">Not set (Click to enter)</span>}
+                      </span>
+                      <button
+                        onClick={() => setIsQuickEditingAddress(true)}
+                        className="text-slate-400 hover:text-amber-600 cursor-pointer"
+                        title="Edit Address"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Joined (Auto-set on first login) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span className="font-semibold text-slate-500 dark:text-slate-400">Joined:</span>
+                  </div>
+                  <span className="font-bold text-slate-800 dark:text-white">{joinedDate}</span>
+                </div>
+              </div>
+
+              {/* Menu Navigation Sections */}
+              <div className="space-y-2.5">
+                {/* 1. STORE PROFILE (Requirement 9: Separate row for each option, all editable) */}
+                <div className={`rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playClick();
+                      setActiveDrawerSection(activeDrawerSection === 'profile' ? null : 'profile');
+                    }}
+                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#008744] dark:text-emerald-400 flex items-center justify-center">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-white">Store Profile</p>
+                        <p className="text-[10px] text-slate-400">View and edit shop credentials</p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                      activeDrawerSection === 'profile' ? 'rotate-180 text-[#008744]' : ''
+                    }`} />
+                  </button>
+
+                  {/* Expanded Store Profile Form (Separate Row for each option) */}
+                  {activeDrawerSection === 'profile' && (
+                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 space-y-2.5 animate-fadeIn">
+                      {profileSaveSuccess && (
+                        <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Profile updated successfully!</span>
+                        </div>
+                      )}
+
+                      {/* Row 1: Shop Owner */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <User className="w-3 h-3 text-[#008744]" />
+                          <span>Shop Owner</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.shopOwner}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, shopOwner: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="Owner name"
+                        />
+                      </div>
+
+                      {/* Row 2: Shop Address */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-amber-500" />
+                          <span>Shop Address</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.shopAddress}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, shopAddress: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="e.g. 12/A Main Market, Kolkata"
+                        />
+                      </div>
+
+                      {/* Row 3: Phone Number */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-blue-500" />
+                          <span>Phone Number</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.phone}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="e.g. +91 98765 43210"
+                        />
+                      </div>
+
+                      {/* Row 4: Password */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-rose-500" />
+                          <span>Password</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPasswordInProfile ? 'text' : 'password'}
+                            value={profileData.password}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
+                            className="w-full pl-3 pr-8 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                            placeholder="Password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordInProfile(!showPasswordInProfile)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          >
+                            {showPasswordInProfile ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Row 5: Email */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <ShoppingBag className="w-3 h-3 text-purple-500" />
+                          <span>Email</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={profileData.email}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="e.g. shop@grocery.com"
+                        />
+                      </div>
+
+                      {/* Row 6: Business Type */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <Building className="w-3 h-3 text-teal-500" />
+                          <span>Business Type</span>
+                        </label>
+                        <select
+                          value={profileData.businessType}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, businessType: e.target.value as any }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                        >
+                          <option value="small">Small Shop (Solo / Kirana)</option>
+                          <option value="medium">Medium Shop (1-2 Staff)</option>
+                          <option value="large">Large Shop (Wholesale / Supermart)</option>
+                        </select>
+                      </div>
+
+                      {/* Save Button */}
+                      <button
+                        type="button"
+                        onClick={handleSaveProfile}
+                        className="w-full mt-2 py-2 rounded-xl bg-[#008744] hover:bg-[#06723b] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all active:scale-98"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save Profile Changes</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. LANGUAGE (Requirement 10: 3 options vertically one below the other) */}
+                <div className={`rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playClick();
+                      setActiveDrawerSection(activeDrawerSection === 'language' ? null : 'language');
+                    }}
+                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-white">Language</p>
+                        <p className="text-[10px] text-slate-400">Change app language anytime</p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                      activeDrawerSection === 'language' ? 'rotate-180 text-blue-600' : ''
+                    }`} />
+                  </button>
+
+                  {/* 3 Language options vertically one below the other */}
+                  {activeDrawerSection === 'language' && (
+                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 animate-fadeIn">
+                      {[
+                        { id: 'bn', label: 'বাংলা', subtitle: 'Bengali' },
+                        { id: 'en', label: 'English', subtitle: 'English' },
+                        { id: 'hi', label: 'हिन्दी', subtitle: 'Hindi' },
+                      ].map((lang) => {
+                        const isSelected = language === lang.id;
+                        return (
+                          <button
+                            key={lang.id}
+                            type="button"
+                            onClick={() => {
+                              soundFx.playClick();
+                              setLanguage(lang.id as any);
+                            }}
+                            className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#008744] text-white shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
+                            }`}
+                          >
+                            <span className="text-sm">{lang.label}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                                {lang.subtitle}
+                              </span>
+                              {isSelected && <Check className="w-4 h-4" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. THEME (Requirement 11: Default and Dark Theme options) */}
+                <div className={`rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playClick();
+                      setActiveDrawerSection(activeDrawerSection === 'theme' ? null : 'theme');
+                    }}
+                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                        <Palette className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-white">Theme</p>
+                        <p className="text-[10px] text-slate-400">Default or Dark theme</p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                      activeDrawerSection === 'theme' ? 'rotate-180 text-purple-600' : ''
+                    }`} />
+                  </button>
+
+                  {/* 2 Theme Options: Default & Dark Theme */}
+                  {activeDrawerSection === 'theme' && (
+                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 animate-fadeIn">
+                      {/* Default Theme */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTheme('default')}
+                        className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                          theme === 'default'
+                            ? 'bg-[#008744] text-white shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Sun className="w-4 h-4" />
+                          <div className="text-left">
+                            <p className="font-bold">Default</p>
+                            <p className={`text-[10px] ${theme === 'default' ? 'text-emerald-100' : 'text-slate-400'}`}>
+                              Original Light Emerald Theme
+                            </p>
+                          </div>
+                        </div>
+                        {theme === 'default' && <Check className="w-4 h-4" />}
+                      </button>
+
+                      {/* Dark Theme */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTheme('dark')}
+                        className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                          theme === 'dark'
+                            ? 'bg-slate-800 text-emerald-400 border border-emerald-500 shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Moon className="w-4 h-4" />
+                          <div className="text-left">
+                            <p className="font-bold">Dark Theme</p>
+                            <p className={`text-[10px] ${theme === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>
+                              Modern Dark Palette
+                            </p>
+                          </div>
+                        </div>
+                        {theme === 'dark' && <Check className="w-4 h-4 text-emerald-400" />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Switch Store / Logout Button */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  setShowMenuDrawer(false);
+                  onReset();
+                }}
+                className="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-700 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Switch Store / Reset Setup</span>
               </button>
             </div>
-
-            <div className="my-3">
-              <span className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                ৳১২,৪৫০
-              </span>
-              <span className="text-xs font-bold text-emerald-600 ml-2 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                +১৮% বৃদ্ধি
-              </span>
-            </div>
-
-            {/* Visual SVG Chart */}
-            <div className="w-full pt-2">
-              <svg viewBox="0 0 280 90" className="w-full h-24 sm:h-28" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="salesGradLight" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M0,75 L35,62 L70,68 L105,48 L140,55 L175,35 L210,38 L245,18 L280,10 L280,90 L0,90 Z"
-                  fill="url(#salesGradLight)"
-                />
-                <polyline
-                  points="0,75 35,62 70,68 105,48 140,55 175,35 210,38 245,18 280,10"
-                  fill="none"
-                  stroke="#059669"
-                  strokeWidth="3"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-                {[[0, 75], [70, 68], [140, 55], [210, 38], [280, 10]].map(([x, y], i) => (
-                  <circle key={i} cx={x} cy={y} r="4" fill="#059669" stroke="#ffffff" strokeWidth="2" />
-                ))}
-              </svg>
-              <div className={`flex justify-between text-[10px] font-bold mt-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                {['সকাল ৮টা', '১০টা', 'দুপুর ১২টা', '২টা', 'বিকাল ৪টা', 'সন্ধ্যা ৬টা', 'রাত ৮টা'].map((t) => (
-                  <span key={t}>{t}</span>
-                ))}
-              </div>
-            </div>
           </div>
+        </div>
+      )}
 
-          {/* Best Selling Products (5 Cols) */}
-          <div
-            className={`lg:col-span-5 p-4 sm:p-5 rounded-3xl border transition-all ${
-              isDark
-                ? 'bg-slate-800/80 border-slate-700/70'
-                : 'bg-white border-slate-200/80 shadow-xs'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3.5">
-              <h3 className={`text-base font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                সেরা বিক্রিত পণ্য (Best Selling)
-              </h3>
-              <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700">
-                সব দেখুন
+      {/* ==================== 6. NOTIFICATIONS POPOVER ==================== */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-[#ff3b30]" />
+                <h3 className="font-bold text-base text-[#111827]">
+                  Store Notifications ({notificationCount})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNotifications(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-2.5">
-              {bestSelling.map((item) => (
-                <div
-                  key={item.name}
-                  className={`flex items-center justify-between p-3 rounded-2xl border transition-all hover:scale-[1.01] ${
-                    isDark
-                      ? 'bg-slate-900/60 border-slate-700/70 hover:border-slate-600'
-                      : 'bg-slate-50/90 border-slate-200/80 hover:bg-slate-100/80'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white shadow-xs border border-slate-200 flex items-center justify-center text-xl shrink-0">
-                      {item.img}
-                    </div>
-                    <div>
-                      <p className={`text-xs font-bold truncate max-w-[130px] ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {item.nameBn}
-                      </p>
-                      <p className="text-[10px] font-bold text-emerald-600">
-                        {item.price}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-xs font-black text-slate-800 px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 font-mono">
-                      {item.sold} বিক্রি
-                    </span>
-                  </div>
+              {metrics.outOfStockCount > 0 ? (
+                <div className="p-3 rounded-2xl bg-red-50 border border-red-100 text-xs text-red-900 font-medium">
+                  ⚠️ <strong>{metrics.outOfStockCount} products out of stock:</strong> Requires immediate reorder.
                 </div>
-              ))}
+              ) : (
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>No products currently out of stock.</span>
+                </div>
+              )}
+
+              {metrics.lowStockCount > 0 ? (
+                <div className="p-3 rounded-2xl bg-amber-50 border border-amber-100 text-xs text-amber-900 font-medium">
+                  ⚡ <strong>{metrics.lowStockCount} products low in stock:</strong> Check inventory levels.
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Inventory levels are sufficient.</span>
+                </div>
+              )}
+
+              {metrics.expiringCount > 0 ? (
+                <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100 text-xs text-blue-900 font-medium">
+                  🕒 <strong>{metrics.expiringCount} products expiring soon:</strong> Consider clearance discounts.
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>No products expiring in the near term.</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowNotifications(false)}
+              className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-[#06723b] text-white font-bold text-xs cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 7. SEARCH MODAL ==================== */}
+      {showSearchModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 bg-black/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-base text-[#111827]">Search Products & Invoices</h3>
+              <button
+                type="button"
+                onClick={() => setShowSearchModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by product name, barcode, or invoice ID..."
+                className="w-full bg-[#f8faf9] border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-sm font-medium outline-none focus:border-[#008744]"
+                autoFocus
+              />
+            </div>
+
+            <div className="text-xs text-slate-500 text-center py-6">
+              {searchQuery ? `Searching for "${searchQuery}" in inventory...` : 'Type any item name or scan barcode to view inventory details.'}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Reset / Switch Store Trigger */}
-        <div className="flex justify-center pt-2">
-          <button
-            onClick={onReset}
-            className={`flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl transition-all border ${
-              isDark
-                ? 'bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border-slate-700'
-                : 'bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 border-slate-200 shadow-xs'
-            }`}
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
-            <span>দোকান পরিবর্তন / লগআউট (Switch Store)</span>
-          </button>
-        </div>
-      </main>
-
-      {/* FLOATING VOICE MIC BUTTON */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
-        <button
-          onClick={() => setMicActive((v) => !v)}
-          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 active:scale-95 ${
-            micActive
-              ? 'bg-rose-500 shadow-rose-500/40 animate-pulse text-white'
-              : 'bg-gradient-to-tr from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 shadow-emerald-500/30 hover:scale-105'
-          }`}
-          aria-label="Voice Assistant"
-          title="Voice Assistant"
-        >
-          <Mic className="w-6 h-6" />
-        </button>
-      </div>
-
-      {/* BOTTOM NAVIGATION BAR */}
-      <nav
-        className={`fixed bottom-0 left-0 right-0 z-30 border-t backdrop-blur-xl transition-colors ${
-          isDark
-            ? 'bg-slate-950/95 border-slate-800/80'
-            : 'bg-white/95 border-slate-200/90 shadow-lg'
-        }`}
-      >
-        <div className="max-w-md mx-auto flex items-center justify-around px-3 py-2">
-          {[
-            { id: 'home', icon: <LayoutDashboard className="w-5 h-5" />, label: 'হোম (Home)' },
-            { id: 'sales', icon: <ShoppingCart className="w-5 h-5" />, label: 'বিক্রয় (Sales)' },
-            { id: 'reports', icon: <BarChart2 className="w-5 h-5" />, label: 'রিপোর্ট (Reports)' },
-            { id: 'more', icon: <MoreHorizontal className="w-5 h-5" />, label: 'অন্যান্য (More)' },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
+      {/* ==================== 8. ATTENTION ITEM DETAIL MODAL ==================== */}
+      {selectedAttentionItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-bold text-base text-[#111827]">
+                {selectedAttentionItem === 'out_of_stock' && 'Out of Stock Products'}
+                {selectedAttentionItem === 'low_stock' && 'Low Stock Inventory'}
+                {selectedAttentionItem === 'expiring_soon' && 'Expiring Soon Alert'}
+              </h3>
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all ${
-                  isActive
-                    ? 'text-emerald-600 font-extrabold'
-                    : isDark
-                    ? 'text-slate-500 hover:text-slate-300'
-                    : 'text-slate-400 hover:text-slate-700'
-                }`}
+                type="button"
+                onClick={() => setSelectedAttentionItem(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
               >
-                {tab.icon}
-                <span className={`text-[10px] font-bold ${isActive ? 'text-emerald-600' : 'inherit'}`}>
-                  {tab.label}
-                </span>
-                {isActive && <div className="w-1.5 h-1.5 bg-emerald-600 rounded-full" />}
+                <X className="w-5 h-5" />
               </button>
-            );
-          })}
+            </div>
+
+            <div className="space-y-2 text-xs">
+              {selectedAttentionItem === 'out_of_stock' && (
+                metrics.outOfStockCount > 0 ? (
+                  <>
+                    <div className="flex justify-between p-2.5 rounded-xl bg-red-50 text-red-900 font-semibold">
+                      <span>🌾 Miniket Rice 5kg</span>
+                      <span className="font-bold">0 units</span>
+                    </div>
+                    <div className="flex justify-between p-2.5 rounded-xl bg-red-50 text-red-900 font-semibold">
+                      <span>🛢️ Fresh Sunflower Oil 1L</span>
+                      <span className="font-bold">0 units</span>
+                    </div>
+                    <div className="flex justify-between p-2.5 rounded-xl bg-red-50 text-red-900 font-semibold">
+                      <span>🧂 Pure Crystal Sugar 1kg</span>
+                      <span className="font-bold">0 units</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 text-center text-slate-500">
+                    No products currently out of stock.
+                  </div>
+                )
+              )}
+
+              {selectedAttentionItem === 'low_stock' && (
+                metrics.lowStockCount > 0 ? (
+                  <>
+                    <div className="flex justify-between p-2.5 rounded-xl bg-amber-50 text-amber-900 font-semibold">
+                      <span>🍪 Parle-G Biscuit 500g</span>
+                      <span className="font-bold">2 packs left</span>
+                    </div>
+                    <div className="flex justify-between p-2.5 rounded-xl bg-amber-50 text-amber-900 font-semibold">
+                      <span>🥚 Farm Eggs (12 Pack)</span>
+                      <span className="font-bold">3 crates left</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 text-center text-slate-500">
+                    No low stock items. All inventory levels healthy.
+                  </div>
+                )
+              )}
+
+              {selectedAttentionItem === 'expiring_soon' && (
+                metrics.expiringCount > 0 ? (
+                  <>
+                    <div className="flex justify-between p-2.5 rounded-xl bg-blue-50 text-blue-900 font-semibold">
+                      <span>🍞 Whole Wheat Bread 400g</span>
+                      <span className="font-bold">Expires in 2 days</span>
+                    </div>
+                    <div className="flex justify-between p-2.5 rounded-xl bg-blue-50 text-blue-900 font-semibold">
+                      <span>🥣 Fresh Curd / Dahi 200g</span>
+                      <span className="font-bold">Expires in 3 days</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 text-center text-slate-500">
+                    No products expiring soon.
+                  </div>
+                )
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedAttentionItem(null)}
+              className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-[#06723b] text-white font-bold text-xs cursor-pointer"
+            >
+              Done
+            </button>
+          </div>
         </div>
-      </nav>
+      )}
     </div>
   );
 };

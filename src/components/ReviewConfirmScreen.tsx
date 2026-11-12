@@ -77,28 +77,28 @@ export const ReviewConfirmScreen: React.FC<ReviewConfirmScreenProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 animate-fade-in">
+    <div className="w-full max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 animate-fade-in text-slate-800">
       {/* Title Header */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#183626] tracking-tight">
           {t('reviewTitle')}
         </h2>
-        <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-md mx-auto">
+        <p className="text-xs sm:text-sm text-[#5e7768] mt-1 max-w-md mx-auto">
           {t('reviewSubtitle')}
         </p>
       </div>
 
       {/* Voice Assistant Reading Bar */}
-      <div className="mb-6 p-4 rounded-3xl bg-emerald-950/80 border-2 border-emerald-500/40 shadow-xl shadow-emerald-500/15 flex items-center justify-between gap-4">
+      <div className="mb-6 p-4 rounded-3xl bg-[#e8f5ec] border border-[#d2e8d9] shadow-xs flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isSpeaking ? 'bg-emerald-400 text-slate-950 animate-bounce' : 'bg-slate-800 text-emerald-400'}`}>
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isSpeaking ? 'bg-[#235338] text-white animate-bounce' : 'bg-white text-[#235338] border border-[#d2e8d9]'}`}>
             <Volume2 className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-bold text-white">
+            <p className="text-xs font-bold text-[#183626]">
               {isSpeaking ? t('reviewAudioReading') : t('reviewVoiceReady')}
             </p>
-            <p className="text-[11px] text-emerald-300">
+            <p className="text-[11px] text-[#235338] font-semibold">
               {isSpeaking ? t('reviewListenActive') : t('reviewListenAgain')}
             </p>
           </div>
@@ -107,18 +107,18 @@ export const ReviewConfirmScreen: React.FC<ReviewConfirmScreenProps> = ({
         <div className="flex items-center gap-3">
           {isSpeaking && (
             <div className="flex items-center gap-1 h-6">
-              <span className="w-1 bg-emerald-400 rounded-full animate-wave-1"></span>
-              <span className="w-1 bg-emerald-400 rounded-full animate-wave-2"></span>
-              <span className="w-1 bg-emerald-400 rounded-full animate-wave-3"></span>
-              <span className="w-1 bg-emerald-400 rounded-full animate-wave-4"></span>
-              <span className="w-1 bg-emerald-400 rounded-full animate-wave-5"></span>
+              <span className="w-1 bg-[#235338] rounded-full animate-wave-1"></span>
+              <span className="w-1 bg-[#235338] rounded-full animate-wave-2"></span>
+              <span className="w-1 bg-[#235338] rounded-full animate-wave-3"></span>
+              <span className="w-1 bg-[#235338] rounded-full animate-wave-4"></span>
+              <span className="w-1 bg-[#235338] rounded-full animate-wave-5"></span>
             </div>
           )}
 
           <button
             type="button"
             onClick={handleToggleVoice}
-            className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition-all flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#edf4ee] text-[#235338] text-xs font-bold border border-[#d2e8d9] transition-all flex items-center gap-1.5 cursor-pointer"
           >
             {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             <span>{isSpeaking ? t('stopAudio') : t('listenAudio')}</span>
@@ -127,81 +127,81 @@ export const ReviewConfirmScreen: React.FC<ReviewConfirmScreenProps> = ({
       </div>
 
       {/* Summary Card Details */}
-      <div className="p-6 sm:p-7 rounded-3xl bg-slate-800/80 border border-slate-700/80 shadow-2xl space-y-5 mb-8 relative overflow-hidden">
+      <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#e2ede5] shadow-sm space-y-5 mb-8 relative overflow-hidden">
         {/* Decorative Store Header */}
-        <div className="flex items-start justify-between pb-5 border-b border-slate-700/70">
+        <div className="flex items-start justify-between pb-5 border-b border-[#edf4ee]">
           <div className="flex items-center gap-3.5">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+            <div className="w-14 h-14 rounded-2xl bg-[#e8f5ec] text-[#235338] flex items-center justify-center shadow-xs border border-[#d2e8d9]">
               <Store className="w-7 h-7" />
             </div>
             <div>
-              <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">
+              <span className="text-[10px] font-bold text-[#235338] tracking-wider uppercase">
                 {t('reviewShopName')}
               </span>
-              <h3 className="text-xl sm:text-2xl font-black text-white">
+              <h3 className="text-xl sm:text-2xl font-black text-[#183626]">
                 {data.shopName}
               </h3>
             </div>
           </div>
 
-          <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#e8f5ec] text-[#235338] border border-[#d2e8d9] flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#235338]" />
             {t('activeBadge')}
           </span>
         </div>
 
-        {/* Detailed Grid */}
+        {/* Detailed Grid: 1-col on mobile, 2-col on tablet/desktop */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Owner Name */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-              <User className="w-4 h-4 text-emerald-400" />
+          <div className="p-4 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5]">
+            <div className="flex items-center gap-2 text-[#5e7768] text-xs mb-1">
+              <User className="w-4 h-4 text-[#235338]" />
               <span>{t('reviewOwnerName')}</span>
             </div>
-            <p className="text-base font-bold text-white">{data.ownerName}</p>
+            <p className="text-base font-bold text-[#183626]">{data.ownerName}</p>
           </div>
 
           {/* Business Type */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-              <Building2 className="w-4 h-4 text-teal-400" />
+          <div className="p-4 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5]">
+            <div className="flex items-center gap-2 text-[#5e7768] text-xs mb-1">
+              <Building2 className="w-4 h-4 text-[#235338]" />
               <span>{t('reviewBusinessType')}</span>
             </div>
-            <p className="text-base font-bold text-teal-300">{currentTypeLabel}</p>
+            <p className="text-base font-bold text-[#235338]">{currentTypeLabel}</p>
           </div>
 
           {/* Email / Phone Contact */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
+          <div className="p-4 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5]">
+            <div className="flex items-center gap-2 text-[#5e7768] text-xs mb-1">
               {data.loginMethod === 'phone' ? (
-                <Phone className="w-4 h-4 text-emerald-400" />
+                <Phone className="w-4 h-4 text-[#235338]" />
               ) : (
-                <Mail className="w-4 h-4 text-blue-400" />
+                <Mail className="w-4 h-4 text-[#235338]" />
               )}
               <span>{data.loginMethod === 'phone' ? t('reviewPhone') : t('reviewEmail')}</span>
             </div>
-            <p className="text-sm font-semibold text-slate-200 truncate">
+            <p className="text-sm font-semibold text-[#183626] truncate">
               {data.loginMethod === 'phone' ? data.phone : data.email}
             </p>
           </div>
 
           {/* Quick PIN */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60">
-            <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-              <KeyRound className="w-4 h-4 text-amber-400" />
+          <div className="p-4 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5]">
+            <div className="flex items-center gap-2 text-[#5e7768] text-xs mb-1">
+              <KeyRound className="w-4 h-4 text-amber-600" />
               <span>{t('reviewPin')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-black tracking-widest text-amber-300">
+              <span className="text-lg font-black tracking-widest text-[#183626]">
                 {data.quickPin ? '••••' : '1234'}
               </span>
-              <span className="text-[10px] text-slate-400">({data.quickPin})</span>
+              <span className="text-[10px] text-[#5e7768]">({data.quickPin})</span>
             </div>
           </div>
         </div>
 
-        <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-700 text-xs text-slate-300 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-2xl bg-[#fbfcf9] border border-[#e2ede5] text-xs text-[#5e7768] flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-[#235338] shrink-0" />
           <span>{t('reviewEncryptedNote')}</span>
         </div>
       </div>
@@ -211,7 +211,7 @@ export const ReviewConfirmScreen: React.FC<ReviewConfirmScreenProps> = ({
         <button
           type="button"
           onClick={handleConfirmAction}
-          className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-lg shadow-2xl shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all duration-300 flex items-center justify-center gap-2 group"
+          className="w-full py-4 px-6 rounded-2xl bg-[#235338] hover:bg-[#1a442c] text-white font-bold text-lg shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
         >
           <span>{t('btnReviewConfirm')}</span>
           <ArrowRight className="w-6 h-6 group-hover:translate-x-1.5 transition-transform" />
@@ -223,9 +223,9 @@ export const ReviewConfirmScreen: React.FC<ReviewConfirmScreenProps> = ({
             soundFx.playClick();
             onEdit();
           }}
-          className="w-full py-3 px-5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs border border-slate-700 flex items-center justify-center gap-2 transition-all"
+          className="w-full py-3 px-6 rounded-2xl bg-[#edf4ee] hover:bg-[#e2ede4] text-[#235338] font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
         >
-          <Edit3 className="w-4 h-4 text-slate-400" />
+          <Edit3 className="w-4 h-4" />
           <span>{t('btnReviewEdit')}</span>
         </button>
       </div>

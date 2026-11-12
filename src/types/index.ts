@@ -5,6 +5,7 @@ export type ShopType = 'small' | 'medium' | 'large';
 export type UserRole = 'owner' | 'helper';
 
 export type OnboardingStep =
+  | 'welcome'
   | 'splash'
   | 'language'
   | 'role'
@@ -12,6 +13,7 @@ export type OnboardingStep =
   | 'owner-review'
   | 'owner-welcome'
   | 'owner-dashboard'
+  | 'sales-dashboard'
   | 'staff-flow';
 
 export type OwnerSetupSubStep =
@@ -55,4 +57,49 @@ export interface ShopProfile {
   code: string;
   type: ShopType;
   address: string;
+}
+
+export interface HourlySalesPoint {
+  time: string;
+  amount: number;
+}
+
+export interface DashboardMetrics {
+  todaySales: number;
+  todayPurchases: number;
+  todayExpenses: number;
+  todayProfitLoss: number;
+  salesGrowth: number;
+  purchasesGrowth: number;
+  expensesGrowth: number;
+  profitLossGrowth: number;
+  outOfStockCount: number;
+  lowStockCount: number;
+  expiringCount: number;
+  hourlySales: HourlySalesPoint[];
+}
+
+export interface SaleTransaction {
+  id: string;
+  time: string;
+  invoiceNo: string;
+  customerName: string;
+  amount: number;
+  paymentMode: 'Cash' | 'UPI' | 'Card' | 'Credit';
+}
+
+export interface DailySalesTrend {
+  day: string;
+  amount: number;
+}
+
+export interface SalesSummaryData {
+  storeName: string;
+  todaySales: number;
+  totalTransactions: number;
+  estimatedProfit: number;
+  growthPercentage: number;
+  cashSales: number;
+  digitalSales: number;
+  creditSales: number;
 }

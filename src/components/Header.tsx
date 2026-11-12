@@ -2,23 +2,26 @@ import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Language, OnboardingStep } from '../types';
 import { useSoundEffects } from '../hooks/useSoundEffects';
-import { ShoppingBag, Volume2, VolumeX, ArrowLeft, RotateCcw } from 'lucide-react';
+import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { ShoppingBag, Volume2, VolumeX, ArrowLeft, RotateCcw, TrendingUp, Home } from 'lucide-react';
 
 interface HeaderProps {
   currentStep: OnboardingStep;
   onBack?: () => void;
   onReset?: () => void;
+  onOpenSales?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentStep, onBack, onReset }) => {
+export const Header: React.FC<HeaderProps> = ({ currentStep, onBack, onReset, onOpenSales }) => {
   const { language, setLanguage, t } = useLanguage();
   const soundFx = useSoundEffects();
+  const { speak } = useVoiceAssistant();
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const languages: { id: Language; label: string }[] = [
-    { id: 'bn', label: 'বাংলা' },
-    { id: 'en', label: 'English' },
-    { id: 'hi', label: 'हिंदी' },
+  const languages: { id: Language; label: string; audioMsg: string; speechLang: string }[] = [
+    { id: 'bn', label: 'বাংলা', audioMsg: 'আপনি বাংলা ভাষা নির্বাচন করেছেন', speechLang: 'bn-IN' },
+    { id: 'en', label: 'English', audioMsg: 'You selected English language.', speechLang: 'en-US' },
+    { id: 'hi', label: 'हिंदी', audioMsg: 'आपने हिंदी भाषा चुनी है', speechLang: 'hi-IN' },
   ];
 
   const handleToggleSound = () => {
@@ -28,95 +31,100 @@ export const Header: React.FC<HeaderProps> = ({ currentStep, onBack, onReset }) 
     if (newState) soundFx.playClick();
   };
 
-  const handleLanguageChange = (lang: Language) => {
+  const handleLanguageChange = (langObj: typeof languages[0]) => {
     soundFx.playClick();
-    setLanguage(lang);
+    setLanguage(langObj.id);
+    speak(langObj.audioMsg, langObj.speechLang);
   };
 
   return (
-    <header className="w-full max-w-4xl mx-auto pt-4 pb-2 px-4 flex items-center justify-between gap-3 relative z-30">
-      {/* Brand & Step Back */}
-      <div className="flex items-center gap-3">
-        {onBack && currentStep !== 'splash' && currentStep !== 'language' && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="w-10 h-10 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all shadow-sm"
-            title={t('backBtn')}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        )}
+    <header className="w-full bg-[#fbfcf9]/95 backdrop-blur-md border-b border-[#edf4ee] sticky top-0 z-40 transition-all">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+        {/* Brand & Step Back */}
+        <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-2">
+            {onBack && currentStep !== 'splash' && currentStep !== 'language' && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white hover:bg-[#edf4ee] text-[#183626] border border-[#dce8e0] flex items-center justify-center transition-all shadow-xs cursor-pointer"
+                title={t('backBtn')}
+              >
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+              </button>
+            )}
 
-        <div
-          onClick={onReset}
-          role="button"
-          tabIndex={0}
-          className="flex items-center gap-2.5 cursor-pointer group"
-        >
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform">
-            <ShoppingBag className="w-5 h-5" />
-          </div>
-          <div className="hidden sm:block">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-lg font-black text-white tracking-tight">
-                {t('appName')}
-              </h1>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                {t('proBadge')}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 font-medium">
-              {t('appTagline')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Controls: Sound Toggle + Language Switcher + Reset */}
-      <div className="flex items-center gap-2">
-        {/* Sound Toggle */}
-        <button
-          type="button"
-          onClick={handleToggleSound}
-          className={`p-2 rounded-2xl border transition-all ${
-            soundEnabled
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 shadow-sm'
-              : 'bg-slate-800 text-slate-500 border-slate-700'
-          }`}
-          title={soundEnabled ? t('soundOn') : t('soundOff')}
-        >
-          {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-        </button>
-
-        {/* Compact Language Selector */}
-        <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-2xl border border-slate-700 backdrop-blur-md">
-          {languages.map((lang) => (
-            <button
-              key={lang.id}
-              onClick={() => handleLanguageChange(lang.id)}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
-                language === lang.id
-                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+            <div
+              onClick={onReset}
+              role="button"
+              tabIndex={0}
+              className="flex items-center gap-2.5 cursor-pointer group"
             >
-              {lang.label}
-            </button>
-          ))}
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#e8f5ec] border border-[#d2e8d9] flex items-center justify-center text-[#235338] font-bold shadow-xs group-hover:scale-105 transition-transform">
+                <ShoppingBag className="w-5 h-5 sm:w-5 sm:h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base sm:text-lg font-black text-[#183626] tracking-tight">
+                    {t('appName')}
+                  </span>
+                  <span className="hidden sm:inline-block text-[10px] bg-emerald-100 text-[#235338] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
+                    {t('proBadge')}
+                  </span>
+                </div>
+                <p className="hidden md:block text-xs text-[#5e7768] font-medium">
+                  {t('appTagline')}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Reset / Home */}
-        {onReset && currentStep !== 'splash' && (
+        {/* Right Controls: Sound Toggle + Language Switcher + Reset */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Sound Toggle */}
           <button
             type="button"
-            onClick={onReset}
-            className="p-2 rounded-2xl bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs transition-colors"
-            title={t('resetFlow')}
+            onClick={handleToggleSound}
+            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+              soundEnabled
+                ? 'bg-[#e8f5ec] text-[#235338] border-[#cce5d5] shadow-xs'
+                : 'bg-white text-slate-400 border-[#dce8e0]'
+            }`}
+            title={soundEnabled ? t('soundOn') : t('soundOff')}
           >
-            <RotateCcw className="w-4 h-4" />
+            {soundEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />}
           </button>
-        )}
+
+          {/* Compact Language Selector on All Pages */}
+          <div className="flex items-center gap-1 bg-[#edf4ee] p-1 rounded-xl border border-[#dce8e0]">
+            {languages.map((langItem) => (
+              <button
+                key={langItem.id}
+                onClick={() => handleLanguageChange(langItem)}
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  language === langItem.id
+                    ? 'bg-[#235338] text-white shadow-xs'
+                    : 'text-[#5e7768] hover:text-[#183626]'
+                }`}
+              >
+                {langItem.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Reset / Home */}
+          {onReset && currentStep !== 'splash' && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="p-2 rounded-xl bg-white hover:bg-[#edf4ee] text-[#5e7768] hover:text-[#183626] border border-[#dce8e0] text-xs transition-colors shadow-xs cursor-pointer"
+              title={t('resetFlow')}
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -23,6 +23,16 @@
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 /* Input Focus Ring */
 .grocery-input {
   @apply w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 bg-white/90 text-slate-800 placeholder-slate-400 font-medium transition-all duration-200;
@@ -30,6 +40,22 @@
 
 .grocery-input:focus {
   @apply border-emerald-500 ring-4 ring-emerald-500/15 outline-none bg-white;
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
 }
 
 /* Waveform bars animation */
