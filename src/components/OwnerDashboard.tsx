@@ -3,6 +3,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { OwnerSetupData, DashboardMetrics } from '../types';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { SalesDashboard } from './SalesDashboard';
 import {
   Menu,
   Search,
@@ -21,14 +22,26 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
-  Database,
   ArrowUpRight,
   ArrowDown,
   CheckCircle2,
   Layers,
   TrendingUp,
   PackageCheck,
-  AlertCircle
+  AlertCircle,
+  Check,
+  Moon,
+  Sun,
+  Globe,
+  User,
+  MapPin,
+  Phone,
+  Lock,
+  Eye,
+  EyeOff,
+  Building,
+  Edit3,
+  Palette
 } from 'lucide-react';
 
 interface OwnerDashboardProps {
@@ -202,31 +215,84 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     return () => clearInterval(interval);
   }, [data.ownerName]);
 
-  // Toggle backend test simulation
-  const handleToggleBackendSimulation = () => {
-    soundFx.playClick();
-    if (isDemoDataActive) {
-      setMetrics(defaultZeroMetrics);
-      setIsDemoDataActive(false);
-      speak('Default zero balances and quantities loaded.');
-    } else {
-      setMetrics(backendSampleMetrics);
-      setIsDemoDataActive(true);
-      speak('Sample backend values loaded.');
+  // Dynamic user role from login (defaults to Owner if not set)
+  const userRole = (localStorage.getItem('sgrocery_user_role') || 'owner').toLowerCase() === 'helper' ? 'Helper' : 'Owner';
+  const storeName = data.shopName || localStorage.getItem('sgrocery_store_name') || 'My Store';
+
+  // Joined date: auto-initialized to first login date and saved (Requirement 8)
+  const [joinedDate] = useState<string>(() => {
+    let saved = localStorage.getItem('sgrocery_joined_date');
+    if (!saved) {
+      const now = new Date();
+      saved = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      localStorage.setItem('sgrocery_joined_date', saved);
     }
+    return saved;
+  });
+
+  // Store Profile State (editable fields, Requirement 9)
+  const [profileData, setProfileData] = useState({
+    shopOwner: data.ownerName || localStorage.getItem('sgrocery_owner_name') || 'Store Owner',
+    shopAddress: localStorage.getItem('sgrocery_shop_address') || '', // empty by default
+    phone: data.phone || localStorage.getItem('sgrocery_phone') || '',
+    password: data.password || localStorage.getItem('sgrocery_password') || 'password123',
+    email: data.email || localStorage.getItem('sgrocery_email') || 'store@grocery.com',
+    businessType: data.businessType || localStorage.getItem('sgrocery_business_type') || 'small',
+  });
+
+  const [activeDrawerSection, setActiveDrawerSection] = useState<'profile' | 'language' | 'theme' | null>('profile');
+  const [showPasswordInProfile, setShowPasswordInProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+  const [isQuickEditingOwner, setIsQuickEditingOwner] = useState(false);
+  const [isQuickEditingAddress, setIsQuickEditingAddress] = useState(false);
+
+  // Theme State: 'default' | 'dark' (Requirement 11)
+  const [theme, setTheme] = useState<'default' | 'dark'>(() => {
+    return (localStorage.getItem('sgrocery_theme') as 'default' | 'dark') || 'default';
+  });
+
+  const handleSelectTheme = (selectedTheme: 'default' | 'dark') => {
+    setTheme(selectedTheme);
+    localStorage.setItem('sgrocery_theme', selectedTheme);
+    soundFx.playClick();
   };
 
-  const storeName = data.shopName || 'Maa Laxmi Store';
-  const ownerInitial = (data.ownerName?.[0] || 'R').toUpperCase();
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const handleSaveProfile = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    soundFx.playSuccessCelebration();
+    localStorage.setItem('sgrocery_owner_name', profileData.shopOwner);
+    localStorage.setItem('sgrocery_shop_address', profileData.shopAddress);
+    localStorage.setItem('sgrocery_phone', profileData.phone);
+    localStorage.setItem('sgrocery_password', profileData.password);
+    localStorage.setItem('sgrocery_email', profileData.email);
+    localStorage.setItem('sgrocery_business_type', profileData.businessType);
+    setProfileSaveSuccess(true);
+    speak('Profile details saved successfully.');
+    setTimeout(() => setProfileSaveSuccess(false), 2500);
+  };
+
+  const ownerInitial = (profileData.shopOwner?.[0] || data.ownerName?.[0] || 'M').toUpperCase();
 
   // Notification count: based on total attention items (or 0 when backend data is 0)
   const notificationCount = metrics.outOfStockCount + metrics.lowStockCount + metrics.expiringCount;
 
   return (
-    <div className="w-full min-h-screen bg-[#f8faf9] text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white">
+    <div className={`w-full min-h-screen flex flex-col justify-between selection:bg-emerald-600 selection:text-white transition-colors duration-200 ${
+      theme === 'dark' ? 'dark bg-slate-900 text-slate-100' : 'bg-[#f8faf9] text-slate-800'
+    }`}>
 
       {/* ==================== 1. FULL-SCREEN TOP APP BAR ==================== */}
-      <header className="w-full bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-2xs">
+      <header className={`w-full border-b sticky top-0 z-30 shadow-2xs transition-colors ${
+        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200/80 text-slate-800'
+      }`}>
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           {/* Left: Hamburger Menu + Storefront Graphic + Store Name + Dropdown Chevron */}
           <div className="flex items-center gap-3 sm:gap-4">
@@ -236,7 +302,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 soundFx.playClick();
                 setShowMenuDrawer(true);
               }}
-              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer"
+              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
               title="Menu"
             >
               <Menu className="w-6 h-6 stroke-[2.2]" />
@@ -253,44 +319,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             >
               <StorefrontLogo className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 group-hover:scale-105 transition-transform" />
               <div className="flex items-center gap-1.5">
-                <span className="text-base sm:text-lg lg:text-xl font-extrabold text-[#111827] tracking-tight leading-none">
+                <span className="text-base sm:text-lg lg:text-xl font-extrabold text-[#111827] dark:text-white tracking-tight leading-none">
                   {storeName}
                 </span>
-                <ChevronDown className="w-4 h-4 text-slate-600 stroke-[2.5]" />
+                <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400 stroke-[2.5]" />
               </div>
             </div>
           </div>
-
-          {/* Desktop Navigation Links (Visible on Laptop & Desktop) */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
-            {[
-              { id: 'home', label: 'Home', icon: Home },
-              { id: 'sales', label: 'Sales POS', icon: ShoppingBag },
-              { id: 'reports', label: 'Reports', icon: PieChart },
-              { id: 'more', label: 'Management', icon: LayoutGrid },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    soundFx.playClick();
-                    setActiveTab(tab.id as any);
-                  }}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-[#ebf7ee] text-[#008744] shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-[2]'}`} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </nav>
 
           {/* Right: Search + Notifications Bell (with Badge) + User Avatar "R" */}
           <div className="flex items-center gap-2 sm:gap-3">
@@ -300,7 +335,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 soundFx.playClick();
                 setShowSearchModal(true);
               }}
-              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
               title="Search"
             >
               <Search className="w-5 h-5 stroke-[2]" />
@@ -312,7 +347,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 soundFx.playClick();
                 setShowNotifications(true);
               }}
-              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 text-slate-800 transition-colors relative cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors relative cursor-pointer"
               title="Notifications"
             >
               <Bell className="w-5 h-5 stroke-[2]" />
@@ -330,7 +365,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 setShowMenuDrawer(true);
               }}
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#008744] text-white font-extrabold text-sm sm:text-base flex items-center justify-center shadow-xs hover:scale-105 transition-transform cursor-pointer"
-              title={data.ownerName || 'Rina'}
+              title={profileData.shopOwner || 'Owner'}
             >
               {ownerInitial}
             </button>
@@ -339,461 +374,453 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       </header>
 
       {/* ==================== 2. RESPONSIVE FULL-SCREEN MAIN BODY ==================== */}
-      <main className="w-full flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 pb-24 md:pb-10">
+      {activeTab === 'sales' ? (
+        <main className="w-full flex-1 max-w-7xl mx-auto px-2 sm:px-4 py-4 pb-28 animate-fadeIn">
+          <SalesDashboard storeName={storeName} onBackToHome={() => setActiveTab('home')} />
+        </main>
+      ) : (
+        <main className="w-full flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 pb-28">
 
-        {/* GREETING CARD (Dynamic Time-based Greeting & Dynamic Current Date) */}
-        <section className="w-full bg-[#ebf7ee] border border-emerald-100/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 transition-all shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#111827] tracking-tight">
-                {currentGreeting}
-              </h1>
-              <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-slate-600 font-medium">
-                <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
-                <span>{currentDateFormatted}</span>
+          {/* GREETING CARD (Dynamic Time-based Greeting & Dynamic Current Date) */}
+          <section className={`w-full border rounded-2xl sm:rounded-3xl p-5 sm:p-6 transition-all shadow-xs ${
+            theme === 'dark' ? 'bg-slate-800/80 border-slate-700/80 text-white' : 'bg-[#ebf7ee] border-emerald-100/70 text-slate-800'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight">
+                  {currentGreeting}
+                </h1>
+                <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
+                  <Calendar className="w-4 h-4 text-slate-600 dark:text-slate-400 shrink-0" />
+                  <span>{currentDateFormatted}</span>
+                </div>
               </div>
             </div>
+          </section>
 
-            {/* Backend Data Indicator */}
-            <div className="inline-flex items-center gap-2 self-start sm:self-auto px-3.5 py-1.5 rounded-full bg-white/80 border border-emerald-200/60 text-xs font-semibold text-[#008744] shadow-2xs">
-              <span className={`w-2 h-2 rounded-full ${isDemoDataActive ? 'bg-blue-500 animate-pulse' : 'bg-emerald-500'}`} />
-              <span>{isDemoDataActive ? 'Preview Backend Sample' : 'Default Zero Balances'}</span>
-            </div>
-          </div>
-        </section>
+          {/* 4 MAIN STAT CARDS (Responsive: 1-col on mobile, 2-col on tablet, 4-col across on desktop/laptop) */}
+          <section className="w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
 
-        {/* 4 MAIN STAT CARDS (Responsive: 1-col on mobile, 2-col on tablet, 4-col across on desktop/laptop) */}
-        <section className="w-full">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-
-            {/* Card 1: Today's Sales */}
-            <div className="bg-[#edf8f1] border border-[#dcf2e4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00c569] text-white flex items-center justify-center font-bold text-2xl shadow-xs shrink-0">
-                    ₹
-                  </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
-                      Today's Sales
-                    </p>
-                    <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
-                      ₹{metrics.todaySales.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Circular Trend Sparkline */}
-                <div className="w-10 h-10 rounded-full bg-[#daf5e3] flex items-center justify-center shrink-0">
-                  <svg viewBox="0 0 28 20" className="w-5 h-4">
-                    <path
-                      d="M2 17 L8 11 L14 14 L23 4"
-                      fill="none"
-                      stroke="#00c569"
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <polyline
-                      points="17 4 23 4 23 10"
-                      fill="none"
-                      stroke="#00c569"
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-emerald-950/5">
-                <span className="font-bold text-[#00c569] flex items-center">
-                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  {metrics.salesGrowth}%
-                </span>
-                <span className="text-[#6b7280]">from yesterday</span>
-              </div>
-            </div>
-
-            {/* Card 2: Today's Purchases */}
-            <div className="bg-[#eef6fe] border border-[#d8eafc] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0084ff] text-white flex items-center justify-center shadow-xs shrink-0">
-                    <ShoppingCart className="w-6 h-6 stroke-[2.2]" />
-                  </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
-                      Today's Purchases
-                    </p>
-                    <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
-                      ₹{metrics.todayPurchases.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Circular Trend Sparkline */}
-                <div className="w-10 h-10 rounded-full bg-[#dff0ff] flex items-center justify-center shrink-0">
-                  <svg viewBox="0 0 28 20" className="w-5 h-4">
-                    <path
-                      d="M2 17 L8 11 L14 14 L23 4"
-                      fill="none"
-                      stroke="#0084ff"
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <polyline
-                      points="17 4 23 4 23 10"
-                      fill="none"
-                      stroke="#0084ff"
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-blue-950/5">
-                <span className="font-bold text-[#0084ff] flex items-center">
-                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  {metrics.purchasesGrowth}%
-                </span>
-                <span className="text-[#6b7280]">from yesterday</span>
-              </div>
-            </div>
-
-            {/* Card 3: Today's Expenses */}
-            <div className="bg-[#fff6ec] border border-[#fde8d4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#ff8000] text-white flex items-center justify-center shadow-xs shrink-0">
-                    <Wallet className="w-6 h-6 stroke-[2.2]" />
-                  </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
-                      Today's Expenses
-                    </p>
-                    <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
-                      ₹{metrics.todayExpenses.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Circular Trend Sparkline */}
-                <div className="w-10 h-10 rounded-full bg-[#ffeed9] flex items-center justify-center shrink-0">
-                  <svg viewBox="0 0 28 20" className="w-5 h-4">
-                    <path
-                      d="M2 13 L7 17 L13 9 L19 14 L25 5"
-                      fill="none"
-                      stroke="#ff8000"
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-amber-950/5">
-                <span className="font-bold text-[#ff8000] flex items-center">
-                  <ArrowDown className="w-3.5 h-3.5 stroke-[2.5]" />
-                  {metrics.expensesGrowth}%
-                </span>
-                <span className="text-[#6b7280]">from yesterday</span>
-              </div>
-            </div>
-
-            {/* Card 4: Today's Profit/Loss (Default 0 as instructed) */}
-            <div className="bg-[#f8f2fe] border border-[#ecdcff] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#8a2be2] text-white flex items-center justify-center shadow-xs shrink-0">
-                    {/* 3 Bar Chart Icon */}
-                    <div className="flex items-end gap-1 h-5">
-                      <span className="w-1.5 bg-white rounded-xs h-2.5"></span>
-                      <span className="w-1.5 bg-white rounded-xs h-5"></span>
-                      <span className="w-1.5 bg-white rounded-xs h-3.5"></span>
+              {/* Card 1: Today's Sales */}
+              <div className="bg-[#edf8f1] border border-[#dcf2e4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00c569] text-white flex items-center justify-center font-bold text-2xl shadow-xs shrink-0">
+                      ₹
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Sales
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todaySales.toLocaleString()}
+                      </p>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
-                      Today's Profit/Loss
-                    </p>
-                    <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
-                      ₹{metrics.todayProfitLoss.toLocaleString()}
-                    </p>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#daf5e3] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 17 L8 11 L14 14 L23 4"
+                        fill="none"
+                        stroke="#00c569"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <polyline
+                        points="17 4 23 4 23 10"
+                        fill="none"
+                        stroke="#00c569"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </div>
                 </div>
 
-                {/* Circular Trend Sparkline */}
-                <div className="w-10 h-10 rounded-full bg-[#f3e8ff] flex items-center justify-center shrink-0">
-                  <svg viewBox="0 0 28 20" className="w-5 h-4">
-                    <path
-                      d="M2 16 L8 12 L13 15 L18 8 L24 10"
-                      fill="none"
-                      stroke="#8a2be2"
-                      strokeWidth="2.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-emerald-950/5">
+                  <span className="font-bold text-[#00c569] flex items-center">
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.salesGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-purple-950/5">
-                <span className="font-bold text-[#8a2be2] flex items-center">
-                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  {metrics.profitLossGrowth}%
-                </span>
-                <span className="text-[#6b7280]">from yesterday</span>
+              {/* Card 2: Today's Purchases */}
+              <div className="bg-[#eef6fe] border border-[#d8eafc] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0084ff] text-white flex items-center justify-center shadow-xs shrink-0">
+                      <ShoppingCart className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Purchases
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todayPurchases.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#dff0ff] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 17 L8 11 L14 14 L23 4"
+                        fill="none"
+                        stroke="#0084ff"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <polyline
+                        points="17 4 23 4 23 10"
+                        fill="none"
+                        stroke="#0084ff"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-blue-950/5">
+                  <span className="font-bold text-[#0084ff] flex items-center">
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.purchasesGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
+                </div>
               </div>
+
+              {/* Card 3: Today's Expenses */}
+              <div className="bg-[#fff6ec] border border-[#fde8d4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#ff8000] text-white flex items-center justify-center shadow-xs shrink-0">
+                      <Wallet className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Expenses
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todayExpenses.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#ffeed9] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 13 L7 17 L13 9 L19 14 L25 5"
+                        fill="none"
+                        stroke="#ff8000"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-amber-950/5">
+                  <span className="font-bold text-[#ff8000] flex items-center">
+                    <ArrowDown className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.expensesGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
+                </div>
+              </div>
+
+              {/* Card 4: Today's Profit/Loss (Default 0 as instructed) */}
+              <div className="bg-[#f8f2fe] border border-[#ecdcff] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#8a2be2] text-white flex items-center justify-center shadow-xs shrink-0">
+                      {/* 3 Bar Chart Icon */}
+                      <div className="flex items-end gap-1 h-5">
+                        <span className="w-1.5 bg-white rounded-xs h-2.5"></span>
+                        <span className="w-1.5 bg-white rounded-xs h-5"></span>
+                        <span className="w-1.5 bg-white rounded-xs h-3.5"></span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                        Today's Profit/Loss
+                      </p>
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                        ₹{metrics.todayProfitLoss.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Circular Trend Sparkline */}
+                  <div className="w-10 h-10 rounded-full bg-[#f3e8ff] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 28 20" className="w-5 h-4">
+                      <path
+                        d="M2 16 L8 12 L13 15 L18 8 L24 10"
+                        fill="none"
+                        stroke="#8a2be2"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-purple-950/5">
+                  <span className="font-bold text-[#8a2be2] flex items-center">
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {metrics.profitLossGrowth}%
+                  </span>
+                  <span className="text-[#6b7280]">from yesterday</span>
+                </div>
+              </div>
+
             </div>
+          </section>
 
-          </div>
-        </section>
+          {/* ==================== 3. SPLIT SECTION ON DESKTOP: CHART (LEFT) & ATTENTION (RIGHT) ==================== */}
+          <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
 
-        {/* ==================== 3. SPLIT SECTION ON DESKTOP: CHART (LEFT) & ATTENTION (RIGHT) ==================== */}
-        <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+            {/* LEFT: DAILY SALES OVERVIEW (CHART) - Occupies 7 columns on Desktop */}
+            <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-[#111827]">
+                    Daily Sales Overview
+                  </h2>
+                  <p className="text-xs text-[#6b7280] font-normal mt-0.5">
+                    Real-time Hourly Performance
+                  </p>
+                </div>
 
-          {/* LEFT: DAILY SALES OVERVIEW (CHART) - Occupies 7 columns on Desktop */}
-          <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-[#111827]">
-                  Daily Sales Overview
-                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    setActiveTab('reports');
+                  }}
+                  className="text-xs sm:text-sm font-semibold text-[#1877f2] hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  <span>View Report</span>
+                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Total Sales Value */}
+              <div className="mt-3 mb-4">
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
+                  ₹{metrics.todaySales.toLocaleString()}
+                </p>
                 <p className="text-xs text-[#6b7280] font-normal mt-0.5">
-                  Real-time Hourly Performance
+                  Total Sales Today
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setActiveTab('reports');
-                }}
-                className="text-xs sm:text-sm font-semibold text-[#1877f2] hover:underline flex items-center gap-0.5 cursor-pointer"
-              >
-                <span>View Report</span>
-                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-              </button>
-            </div>
+              {/* Responsive Line Chart SVG */}
+              <div className="w-full pt-2">
+                <svg viewBox="0 0 500 150" className="w-full h-44 sm:h-52 overflow-visible" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00c569" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#00c569" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
 
-            {/* Total Sales Value */}
-            <div className="mt-3 mb-4">
-              <p className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
-                ₹{metrics.todaySales.toLocaleString()}
-              </p>
-              <p className="text-xs text-[#6b7280] font-normal mt-0.5">
-                Total Sales Today
-              </p>
-            </div>
+                  {/* Y-Axis Guidelines & Labels */}
+                  {/* ₹3K */}
+                  <text x="0" y="16" fill="#9ca3af" fontSize="11" fontWeight="600">₹3K</text>
+                  <line x1="38" y1="12" x2="495" y2="12" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
 
-            {/* Responsive Line Chart SVG */}
-            <div className="w-full pt-2">
-              <svg viewBox="0 0 500 150" className="w-full h-44 sm:h-52 overflow-visible" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00c569" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#00c569" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
+                  {/* ₹2K */}
+                  <text x="0" y="52" fill="#9ca3af" fontSize="11" fontWeight="600">₹2K</text>
+                  <line x1="38" y1="48" x2="495" y2="48" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
 
-                {/* Y-Axis Guidelines & Labels */}
-                {/* ₹3K */}
-                <text x="0" y="16" fill="#9ca3af" fontSize="11" fontWeight="600">₹3K</text>
-                <line x1="38" y1="12" x2="495" y2="12" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+                  {/* ₹1K */}
+                  <text x="0" y="88" fill="#9ca3af" fontSize="11" fontWeight="600">₹1K</text>
+                  <line x1="38" y1="84" x2="495" y2="84" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
 
-                {/* ₹2K */}
-                <text x="0" y="52" fill="#9ca3af" fontSize="11" fontWeight="600">₹2K</text>
-                <line x1="38" y1="48" x2="495" y2="48" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+                  {/* ₹0 */}
+                  <text x="8" y="124" fill="#9ca3af" fontSize="11" fontWeight="600">₹0</text>
+                  <line x1="38" y1="120" x2="495" y2="120" stroke="#f1f5f9" strokeWidth="1.2" />
 
-                {/* ₹1K */}
-                <text x="0" y="88" fill="#9ca3af" fontSize="11" fontWeight="600">₹1K</text>
-                <line x1="38" y1="84" x2="495" y2="84" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
-
-                {/* ₹0 */}
-                <text x="8" y="124" fill="#9ca3af" fontSize="11" fontWeight="600">₹0</text>
-                <line x1="38" y1="120" x2="495" y2="120" stroke="#f1f5f9" strokeWidth="1.2" />
-
-                {/* Chart Spline Line & Area */}
-                {metrics.todaySales > 0 ? (
-                  <>
-                    <path
-                      d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12 L 495 120 L 50 120 Z"
-                      fill="url(#fullSalesGradient)"
-                    />
-                    <path
-                      d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12"
-                      fill="none"
-                      stroke="#00c569"
-                      strokeWidth="3.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    {[
-                      { cx: 50, cy: 120 },
-                      { cx: 140, cy: 94 },
-                      { cx: 220, cy: 72 },
-                      { cx: 270, cy: 78 },
-                      { cx: 325, cy: 50 },
-                      { cx: 415, cy: 50 },
-                      { cx: 495, cy: 12 },
-                    ].map((pt, i) => (
-                      <circle
-                        key={i}
-                        cx={pt.cx}
-                        cy={pt.cy}
-                        r="4"
-                        fill="#00c569"
-                        stroke="#ffffff"
-                        strokeWidth="2.5"
-                        className="transition-all hover:scale-125"
+                  {/* Chart Spline Line & Area */}
+                  {metrics.todaySales > 0 ? (
+                    <>
+                      <path
+                        d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12 L 495 120 L 50 120 Z"
+                        fill="url(#fullSalesGradient)"
                       />
-                    ))}
-                  </>
-                ) : (
-                  // Default 0-balance horizontal baseline
-                  <>
-                    <line x1="50" y1="120" x2="495" y2="120" stroke="#00c569" strokeWidth="3" />
-                    {[50, 140, 228, 318, 406, 495].map((cx, i) => (
-                      <circle key={i} cx={cx} cy="120" r="3.5" fill="#00c569" stroke="#ffffff" strokeWidth="2.5" />
-                    ))}
-                  </>
-                )}
-              </svg>
+                      <path
+                        d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12"
+                        fill="none"
+                        stroke="#00c569"
+                        strokeWidth="3.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      {[
+                        { cx: 50, cy: 120 },
+                        { cx: 140, cy: 94 },
+                        { cx: 220, cy: 72 },
+                        { cx: 270, cy: 78 },
+                        { cx: 325, cy: 50 },
+                        { cx: 415, cy: 50 },
+                        { cx: 495, cy: 12 },
+                      ].map((pt, i) => (
+                        <circle
+                          key={i}
+                          cx={pt.cx}
+                          cy={pt.cy}
+                          r="4"
+                          fill="#00c569"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          className="transition-all hover:scale-125"
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    // Default 0-balance horizontal baseline
+                    <>
+                      <line x1="50" y1="120" x2="495" y2="120" stroke="#00c569" strokeWidth="3" />
+                      {[50, 140, 228, 318, 406, 495].map((cx, i) => (
+                        <circle key={i} cx={cx} cy="120" r="3.5" fill="#00c569" stroke="#ffffff" strokeWidth="2.5" />
+                      ))}
+                    </>
+                  )}
+                </svg>
 
-              {/* X-Axis Time Markers */}
-              <div className="flex justify-between items-center text-xs text-[#6b7280] font-medium pt-2 pl-9 pr-1">
-                <span>6 AM</span>
-                <span>9 AM</span>
-                <span>12 PM</span>
-                <span>3 PM</span>
-                <span>6 PM</span>
-                <span>9 PM</span>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: NEEDS YOUR ATTENTION - Occupies 5 columns on Desktop */}
-          <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3.5">
-                <h2 className="text-base sm:text-lg font-bold text-[#111827]">
-                  Needs Your Attention
-                </h2>
-                <span className="text-xs font-semibold text-slate-500">
-                  Live Stock Status
-                </span>
-              </div>
-
-              {/* 3 Attention Items matching the reference image */}
-              <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
-                {/* Item 1: Out of Stock */}
-                <div
-                  onClick={() => {
-                    soundFx.playClick();
-                    setSelectedAttentionItem('out_of_stock');
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#ff4d4f] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                      <X className="w-4 h-4 stroke-[3]" />
-                    </div>
-                    <span className="text-xs sm:text-sm font-semibold text-[#374151]">
-                      {metrics.outOfStockCount} products are out of stock
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-
-                {/* Item 2: Low Stock */}
-                <div
-                  onClick={() => {
-                    soundFx.playClick();
-                    setSelectedAttentionItem('low_stock');
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#faad14] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                      <span className="text-base font-extrabold leading-none pb-0.5">!</span>
-                    </div>
-                    <span className="text-xs sm:text-sm font-semibold text-[#374151]">
-                      {metrics.lowStockCount} products are low in stock
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-
-                {/* Item 3: Expiring Soon */}
-                <div
-                  onClick={() => {
-                    soundFx.playClick();
-                    setSelectedAttentionItem('expiring_soon');
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#1890ff] text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
-                      <Clock className="w-4 h-4 stroke-[2.5]" />
-                    </div>
-                    <span className="text-xs sm:text-sm font-semibold text-[#374151]">
-                      {metrics.expiringCount} products are expiring soon
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                {/* X-Axis Time Markers */}
+                <div className="flex justify-between items-center text-xs text-[#6b7280] font-medium pt-2 pl-9 pr-1">
+                  <span>6 AM</span>
+                  <span>9 AM</span>
+                  <span>12 PM</span>
+                  <span>3 PM</span>
+                  <span>6 PM</span>
+                  <span>9 PM</span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Developer / Backend Note inside Attention card */}
-            <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Database className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Backend API: Ready for integration</span>
-              </span>
-              <button
-                type="button"
-                onClick={handleToggleBackendSimulation}
-                className="text-xs font-bold text-[#008744] hover:underline cursor-pointer"
-              >
-                {isDemoDataActive ? 'Reset to 0' : 'Simulate Data'}
-              </button>
+            {/* RIGHT: NEEDS YOUR ATTENTION - Occupies 5 columns on Desktop */}
+            <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3.5">
+                  <h2 className="text-base sm:text-lg font-bold text-[#111827]">
+                    Needs Your Attention
+                  </h2>
+                  <span className="text-xs font-semibold text-slate-500">
+                    Live Stock Status
+                  </span>
+                </div>
+
+                {/* 3 Attention Items matching the reference image */}
+                <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+                  {/* Item 1: Out of Stock */}
+                  <div
+                    onClick={() => {
+                      soundFx.playClick();
+                      setSelectedAttentionItem('out_of_stock');
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#ff4d4f] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                        <X className="w-4 h-4 stroke-[3]" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                        {metrics.outOfStockCount} products are out of stock
+                      </span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+
+                  {/* Item 2: Low Stock */}
+                  <div
+                    onClick={() => {
+                      soundFx.playClick();
+                      setSelectedAttentionItem('low_stock');
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#faad14] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                        <span className="text-base font-extrabold leading-none pb-0.5">!</span>
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                        {metrics.lowStockCount} products are low in stock
+                      </span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+
+                  {/* Item 3: Expiring Soon */}
+                  <div
+                    onClick={() => {
+                      soundFx.playClick();
+                      setSelectedAttentionItem('expiring_soon');
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#1890ff] text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
+                        <Clock className="w-4 h-4 stroke-[2.5]" />
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                        {metrics.expiringCount} products are expiring soon
+                      </span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-      </main>
+        </main>
+      )}
 
-      {/* ==================== 4. BOTTOM NAVIGATION BAR (STICKY ON MOBILE / TOUCH) ==================== */}
-      <nav className="fixed md:hidden bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200/80 py-2 px-3 shadow-lg">
-        <div className="max-w-md mx-auto flex items-center justify-around">
-          {/* Tab 1: Home (Active) */}
+      {/* ==================== 4. FIXED BOTTOM NAVIGATION BAR (LAPTOP & MOBILE) ==================== */}
+      <nav className={`fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md border-t py-2.5 px-4 sm:px-8 shadow-2xl transition-colors ${
+        theme === 'dark' ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200/90 shadow-slate-900/15'
+      }`}>
+        <div className="max-w-md mx-auto grid grid-cols-2 gap-3 sm:gap-4">
+          {/* Tab 1: Home Page */}
           <button
             type="button"
             onClick={() => {
               soundFx.playClick();
               setActiveTab('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="flex flex-col items-center gap-1 py-1 px-3 cursor-pointer group"
+            className={`py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+              activeTab === 'home'
+                ? 'bg-[#008744] text-white shadow-lg shadow-emerald-700/30 scale-102'
+                : theme === 'dark'
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+            }`}
           >
-            <div className="text-[#008744]">
-              <Home className="w-5 h-5 fill-[#008744]" />
-            </div>
-            <span className="text-xs font-bold text-[#008744]">
-              Home
-            </span>
+            <Home className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+            <span>Home Page</span>
           </button>
 
           {/* Tab 2: Sales */}
@@ -802,151 +829,452 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             onClick={() => {
               soundFx.playClick();
               setActiveTab('sales');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="flex flex-col items-center gap-1 py-1 px-3 cursor-pointer group"
+            className={`py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+              activeTab === 'sales'
+                ? 'bg-[#008744] text-white shadow-lg shadow-emerald-700/30 scale-102'
+                : theme === 'dark'
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+            }`}
           >
-            <div className="text-[#6b7280] group-hover:text-[#111827] transition-colors">
-              <ShoppingBag className="w-5 h-5 stroke-[2]" />
-            </div>
-            <span className="text-xs font-medium text-[#6b7280] group-hover:text-[#111827] transition-colors">
-              Sales
-            </span>
-          </button>
-
-          {/* Tab 3: Reports */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playClick();
-              setActiveTab('reports');
-            }}
-            className="flex flex-col items-center gap-1 py-1 px-3 cursor-pointer group"
-          >
-            <div className="text-[#6b7280] group-hover:text-[#111827] transition-colors">
-              <PieChart className="w-5 h-5 stroke-[2]" />
-            </div>
-            <span className="text-xs font-medium text-[#6b7280] group-hover:text-[#111827] transition-colors">
-              Reports
-            </span>
-          </button>
-
-          {/* Tab 4: More */}
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.playClick();
-              setActiveTab('more');
-            }}
-            className="flex flex-col items-center gap-1 py-1 px-3 cursor-pointer group"
-          >
-            <div className="text-[#6b7280] group-hover:text-[#111827] transition-colors">
-              <LayoutGrid className="w-5 h-5 stroke-[2]" />
-            </div>
-            <span className="text-xs font-medium text-[#6b7280] group-hover:text-[#111827] transition-colors">
-              More
-            </span>
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+            <span>Sales</span>
           </button>
         </div>
       </nav>
 
-      {/* ==================== 5. SLIDE-OUT MENU DRAWER ==================== */}
+      {/* ==================== 5. SLIDE-OUT NAVIGATION DRAWER ==================== */}
       {showMenuDrawer && (
         <div className="fixed inset-0 z-50 flex animate-fade-in">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
             onClick={() => setShowMenuDrawer(false)}
           />
 
           {/* Drawer Panel */}
-          <div className="relative w-4/5 max-w-sm bg-white h-full shadow-2xl p-6 flex flex-col justify-between z-10 animate-slide-right overflow-y-auto">
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <StorefrontLogo className="w-9 h-9" />
+          <div className={`relative w-[88%] max-w-sm h-full shadow-2xl p-5 sm:p-6 flex flex-col justify-between z-10 animate-slide-right overflow-y-auto transition-colors ${
+            theme === 'dark' ? 'bg-slate-900 text-white border-r border-slate-800' : 'bg-white text-slate-800'
+          }`}>
+            <div className="space-y-4">
+              {/* Drawer Top Header (Store Name from Login & Role from Login) */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <StorefrontLogo className="w-10 h-10 shrink-0" />
                   <div>
-                    <h3 className="font-extrabold text-base text-[#111827] leading-tight">
+                    <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
                       {storeName}
                     </h3>
-                    <p className="text-xs text-[#008744] font-bold">
-                      ● Active Storefront
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-[#00c569] animate-pulse"></span>
+                      <span className="text-[11px] font-bold text-[#008744] dark:text-emerald-400 uppercase tracking-wider">
+                        {userRole}
+                      </span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500">• Active Store</span>
+                    </div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowMenuDrawer(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Store & Owner Details */}
-              <div className="p-4 rounded-2xl bg-[#f8faf9] border border-slate-200/80 space-y-1.5 text-xs text-slate-600">
-                <p><strong>Owner:</strong> {data.ownerName || 'Rina'}</p>
-                <p><strong>Business Type:</strong> {data.businessType || 'Small Shop'}</p>
-                <p><strong>Contact:</strong> {data.email || data.phone || 'store@grocery.com'}</p>
-                <p><strong>Daily PIN:</strong> {data.quickPin ? '••••' : 'Configured'}</p>
-              </div>
-
-              {/* Developer Backend Integration Mode */}
-              <div className="p-4 rounded-2xl bg-[#edf8f1] border border-[#d2eed9] space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#0f4b30]">
-                    <Database className="w-4 h-4 text-[#00c569]" />
-                    <span>Backend Data Mode</span>
+              {/* Quick Details Card: Shop Owner, Shop Address, Joined (Requirement 8) */}
+              <div className={`p-3.5 rounded-2xl border space-y-2 text-xs transition-colors ${
+                theme === 'dark' ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-[#f8faf9] border-slate-200/80 text-slate-600'
+              }`}>
+                {/* Shop Owner (Editable) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-[#008744] shrink-0" />
+                    <span className="font-semibold text-slate-500 dark:text-slate-400">Shop Owner:</span>
                   </div>
-                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                    isDemoDataActive ? 'bg-[#00c569] text-white' : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {isDemoDataActive ? 'Simulated Data' : 'Default 0 (Live)'}
-                  </span>
+                  {isQuickEditingOwner ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={profileData.shopOwner}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, shopOwner: e.target.value }))}
+                        className="px-2 py-0.5 rounded border border-emerald-500 bg-white dark:bg-slate-700 text-xs text-slate-900 dark:text-white max-w-[120px]"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          setIsQuickEditingOwner(false);
+                          localStorage.setItem('sgrocery_owner_name', profileData.shopOwner);
+                        }}
+                        className="p-1 rounded bg-[#008744] text-white"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-slate-800 dark:text-white">{profileData.shopOwner}</span>
+                      <button
+                        onClick={() => setIsQuickEditingOwner(true)}
+                        className="text-slate-400 hover:text-[#008744] cursor-pointer"
+                        title="Edit Shop Owner"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-[#486354] leading-relaxed">
-                  Profit & Loss balances and stock counts remain 0 by default. Once backend is connected, simply pass the metrics state from your API.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleToggleBackendSimulation}
-                  className="w-full py-2 px-3 rounded-xl bg-white hover:bg-slate-50 text-[#0f4b30] border border-[#bfe4ca] text-xs font-bold shadow-2xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <span>{isDemoDataActive ? 'Reset to Default 0 Values' : 'Preview with Backend Values'}</span>
-                </button>
+
+                {/* Shop Address (Empty by default, editable) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="font-semibold text-slate-500 dark:text-slate-400">Shop Address:</span>
+                  </div>
+                  {isQuickEditingAddress ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={profileData.shopAddress}
+                        placeholder="Enter address"
+                        onChange={(e) => setProfileData(prev => ({ ...prev, shopAddress: e.target.value }))}
+                        className="px-2 py-0.5 rounded border border-amber-500 bg-white dark:bg-slate-700 text-xs text-slate-900 dark:text-white max-w-[130px]"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          setIsQuickEditingAddress(false);
+                          localStorage.setItem('sgrocery_shop_address', profileData.shopAddress);
+                        }}
+                        className="p-1 rounded bg-[#008744] text-white"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[140px]">
+                        {profileData.shopAddress || <span className="text-slate-400 italic">Not set (Click to enter)</span>}
+                      </span>
+                      <button
+                        onClick={() => setIsQuickEditingAddress(true)}
+                        className="text-slate-400 hover:text-amber-600 cursor-pointer"
+                        title="Edit Address"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Joined (Auto-set on first login) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span className="font-semibold text-slate-500 dark:text-slate-400">Joined:</span>
+                  </div>
+                  <span className="font-bold text-slate-800 dark:text-white">{joinedDate}</span>
+                </div>
               </div>
 
-              {/* Language Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700">App Language (ভাষা)</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'en', label: 'English' },
-                    { id: 'bn', label: 'বাংলা' },
-                    { id: 'hi', label: 'हिंदी' },
-                  ].map((lang) => (
-                    <button
-                      key={lang.id}
-                      type="button"
-                      onClick={() => {
-                        soundFx.playClick();
-                        setLanguage(lang.id as any);
-                      }}
-                      className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        language === lang.id
-                          ? 'bg-[#008744] text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {lang.label}
-                    </button>
-                  ))}
+              {/* Menu Navigation Sections */}
+              <div className="space-y-2.5">
+                {/* 1. STORE PROFILE (Requirement 9: Separate row for each option, all editable) */}
+                <div className={`rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playClick();
+                      setActiveDrawerSection(activeDrawerSection === 'profile' ? null : 'profile');
+                    }}
+                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#008744] dark:text-emerald-400 flex items-center justify-center">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-white">Store Profile</p>
+                        <p className="text-[10px] text-slate-400">View and edit shop credentials</p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                      activeDrawerSection === 'profile' ? 'rotate-180 text-[#008744]' : ''
+                    }`} />
+                  </button>
+
+                  {/* Expanded Store Profile Form (Separate Row for each option) */}
+                  {activeDrawerSection === 'profile' && (
+                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 space-y-2.5 animate-fadeIn">
+                      {profileSaveSuccess && (
+                        <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Profile updated successfully!</span>
+                        </div>
+                      )}
+
+                      {/* Row 1: Shop Owner */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <User className="w-3 h-3 text-[#008744]" />
+                          <span>Shop Owner</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.shopOwner}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, shopOwner: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="Owner name"
+                        />
+                      </div>
+
+                      {/* Row 2: Shop Address */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-amber-500" />
+                          <span>Shop Address</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.shopAddress}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, shopAddress: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="e.g. 12/A Main Market, Kolkata"
+                        />
+                      </div>
+
+                      {/* Row 3: Phone Number */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-blue-500" />
+                          <span>Phone Number</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.phone}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="e.g. +91 98765 43210"
+                        />
+                      </div>
+
+                      {/* Row 4: Password */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-rose-500" />
+                          <span>Password</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPasswordInProfile ? 'text' : 'password'}
+                            value={profileData.password}
+                            onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
+                            className="w-full pl-3 pr-8 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                            placeholder="Password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordInProfile(!showPasswordInProfile)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          >
+                            {showPasswordInProfile ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Row 5: Email */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <ShoppingBag className="w-3 h-3 text-purple-500" />
+                          <span>Email</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={profileData.email}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                          placeholder="e.g. shop@grocery.com"
+                        />
+                      </div>
+
+                      {/* Row 6: Business Type */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                          <Building className="w-3 h-3 text-teal-500" />
+                          <span>Business Type</span>
+                        </label>
+                        <select
+                          value={profileData.businessType}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, businessType: e.target.value as any }))}
+                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
+                        >
+                          <option value="small">Small Shop (Solo / Kirana)</option>
+                          <option value="medium">Medium Shop (1-2 Staff)</option>
+                          <option value="large">Large Shop (Wholesale / Supermart)</option>
+                        </select>
+                      </div>
+
+                      {/* Save Button */}
+                      <button
+                        type="button"
+                        onClick={handleSaveProfile}
+                        className="w-full mt-2 py-2 rounded-xl bg-[#008744] hover:bg-[#06723b] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all active:scale-98"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save Profile Changes</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. LANGUAGE (Requirement 10: 3 options vertically one below the other) */}
+                <div className={`rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playClick();
+                      setActiveDrawerSection(activeDrawerSection === 'language' ? null : 'language');
+                    }}
+                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-white">Language</p>
+                        <p className="text-[10px] text-slate-400">Change app language anytime</p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                      activeDrawerSection === 'language' ? 'rotate-180 text-blue-600' : ''
+                    }`} />
+                  </button>
+
+                  {/* 3 Language options vertically one below the other */}
+                  {activeDrawerSection === 'language' && (
+                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 animate-fadeIn">
+                      {[
+                        { id: 'bn', label: 'বাংলা', subtitle: 'Bengali' },
+                        { id: 'en', label: 'English', subtitle: 'English' },
+                        { id: 'hi', label: 'हिन्दी', subtitle: 'Hindi' },
+                      ].map((lang) => {
+                        const isSelected = language === lang.id;
+                        return (
+                          <button
+                            key={lang.id}
+                            type="button"
+                            onClick={() => {
+                              soundFx.playClick();
+                              setLanguage(lang.id as any);
+                            }}
+                            className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#008744] text-white shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
+                            }`}
+                          >
+                            <span className="text-sm">{lang.label}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                                {lang.subtitle}
+                              </span>
+                              {isSelected && <Check className="w-4 h-4" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. THEME (Requirement 11: Default and Dark Theme options) */}
+                <div className={`rounded-2xl border transition-all ${
+                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFx.playClick();
+                      setActiveDrawerSection(activeDrawerSection === 'theme' ? null : 'theme');
+                    }}
+                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                        <Palette className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-white">Theme</p>
+                        <p className="text-[10px] text-slate-400">Default or Dark theme</p>
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                      activeDrawerSection === 'theme' ? 'rotate-180 text-purple-600' : ''
+                    }`} />
+                  </button>
+
+                  {/* 2 Theme Options: Default & Dark Theme */}
+                  {activeDrawerSection === 'theme' && (
+                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 animate-fadeIn">
+                      {/* Default Theme */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTheme('default')}
+                        className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                          theme === 'default'
+                            ? 'bg-[#008744] text-white shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Sun className="w-4 h-4" />
+                          <div className="text-left">
+                            <p className="font-bold">Default</p>
+                            <p className={`text-[10px] ${theme === 'default' ? 'text-emerald-100' : 'text-slate-400'}`}>
+                              Original Light Emerald Theme
+                            </p>
+                          </div>
+                        </div>
+                        {theme === 'default' && <Check className="w-4 h-4" />}
+                      </button>
+
+                      {/* Dark Theme */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTheme('dark')}
+                        className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                          theme === 'dark'
+                            ? 'bg-slate-800 text-emerald-400 border border-emerald-500 shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Moon className="w-4 h-4" />
+                          <div className="text-left">
+                            <p className="font-bold">Dark Theme</p>
+                            <p className={`text-[10px] ${theme === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>
+                              Modern Dark Palette
+                            </p>
+                          </div>
+                        </div>
+                        {theme === 'dark' && <Check className="w-4 h-4 text-emerald-400" />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Switch Store / Logout Button */}
-            <div className="pt-4 border-t border-slate-100 space-y-2">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
               <button
                 type="button"
                 onClick={() => {
@@ -954,7 +1282,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   setShowMenuDrawer(false);
                   onReset();
                 }}
-                className="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-700 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Switch Store / Reset Setup</span>
@@ -1102,7 +1430,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </>
                 ) : (
                   <div className="p-4 text-center text-slate-500">
-                    No products currently out of stock. (Backend default: 0)
+                    No products currently out of stock.
                   </div>
                 )
               )}
@@ -1121,7 +1449,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </>
                 ) : (
                   <div className="p-4 text-center text-slate-500">
-                    No low stock items. All inventory levels healthy. (Backend default: 0)
+                    No low stock items. All inventory levels healthy.
                   </div>
                 )
               )}
@@ -1140,7 +1468,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </>
                 ) : (
                   <div className="p-4 text-center text-slate-500">
-                    No products expiring soon. (Backend default: 0)
+                    No products expiring soon.
                   </div>
                 )
               )}

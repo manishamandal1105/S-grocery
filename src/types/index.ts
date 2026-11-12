@@ -13,6 +13,7 @@ export type OnboardingStep =
   | 'owner-review'
   | 'owner-welcome'
   | 'owner-dashboard'
+  | 'sales-dashboard'
   | 'staff-flow';
 
 export type OwnerSetupSubStep =
@@ -76,4 +77,29 @@ export interface DashboardMetrics {
   lowStockCount: number;
   expiringCount: number;
   hourlySales: HourlySalesPoint[];
+}
+
+export interface SaleTransaction {
+  id: string;
+  time: string;
+  invoiceNo: string;
+  customerName: string;
+  amount: number;
+  paymentMode: 'Cash' | 'UPI' | 'Card' | 'Credit';
+}
+
+export interface DailySalesTrend {
+  day: string;
+  amount: number;
+}
+
+export interface SalesSummaryData {
+  storeName: string;
+  todaySales: number;
+  totalTransactions: number;
+  estimatedProfit: number;
+  growthPercentage: number;
+  cashSales: number;
+  digitalSales: number;
+  creditSales: number;
 }

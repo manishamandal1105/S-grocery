@@ -2,14 +2,15 @@ import React, { useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { useSoundEffects } from '../hooks/useSoundEffects';
-import { ArrowRight, TrendingUp, Package, Volume2 } from 'lucide-react';
+import { ArrowRight, TrendingUp, Package, Volume2, Home } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
   onSkip?: () => void;
+  onOpenSales?: () => void;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSkip }) => {
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSkip, onOpenSales }) => {
   const { t, language } = useLanguage();
   const { speak } = useVoiceAssistant();
   const soundFx = useSoundEffects();
@@ -49,8 +50,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSk
 
   return (
     <div className="w-full flex-1 flex flex-col justify-between bg-[#fbfcf9] text-slate-800 animate-fade-in relative min-h-screen">
-      {/* Top Bar with Skip Button */}
-      <div className="w-full px-5 sm:px-8 pt-4 pb-2 flex items-center justify-between z-20">
+      {/* Top Bar with Sound and Skip Buttons (Home & Sales hidden until login) */}
+      <div className="w-full px-4 sm:px-8 pt-4 pb-2 flex items-center justify-between z-20 gap-2">
         <button
           type="button"
           onClick={handleReplayVoice}
@@ -63,7 +64,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSk
         <button
           type="button"
           onClick={handleSkip}
-          className="text-sm sm:text-base font-bold text-[#5e7768] hover:text-[#183626] transition-colors px-3 py-1.5 rounded-xl cursor-pointer"
+          className="text-xs sm:text-sm font-bold text-[#5e7768] hover:text-[#183626] transition-colors px-2.5 py-1.5 rounded-xl cursor-pointer"
         >
           {t('welcomeSkip')}
         </button>
@@ -155,14 +156,23 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSk
           <div className="bg-white w-full pb-8 sm:pb-10 pt-2 px-5 sm:px-6">
             <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto space-y-4">
               {/* Feature 1: Manage Sales */}
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-[#52795d] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  if (onOpenSales) onOpenSales();
+                }}
+                className="flex items-center gap-3.5 p-2 rounded-2xl hover:bg-emerald-50/50 transition-colors cursor-pointer group"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#52795d] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
                   <TrendingUp className="w-6 h-6 stroke-[2.5]" />
                 </div>
-                <div>
-                  <h3 className="text-base sm:text-[17px] font-extrabold text-[#183626]">
-                    {t('welcomeFeatureSalesTitle')}
-                  </h3>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base sm:text-[17px] font-extrabold text-[#183626]">
+                      {t('welcomeFeatureSalesTitle')}
+                    </h3>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">View Dashboard →</span>
+                  </div>
                   <p className="text-xs sm:text-sm text-[#5e7768] font-medium leading-snug">
                     {t('welcomeFeatureSalesDesc')}
                   </p>
@@ -170,7 +180,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSk
               </div>
 
               {/* Feature 2: Control Stock */}
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3.5 p-2">
                 <div className="w-12 h-12 rounded-2xl bg-[#52795d] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Package className="w-6 h-6 stroke-[2.5]" />
                 </div>
@@ -185,7 +195,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSk
               </div>
 
               {/* Feature 3: Know Your Profit */}
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3.5 p-2">
                 <div className="w-12 h-12 rounded-2xl bg-[#52795d] text-white flex items-center justify-center shrink-0 shadow-xs">
                   <div className="flex items-center justify-center font-extrabold text-xl leading-none">
                     ₹

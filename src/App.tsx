@@ -12,6 +12,8 @@ import { ReviewConfirmScreen } from './components/ReviewConfirmScreen';
 import { OwnerWelcomeScreen } from './components/OwnerWelcomeScreen';
 import { StaffFlow } from './components/StaffFlow';
 import { OwnerDashboard } from './components/OwnerDashboard';
+import { SalesDashboard } from './components/SalesDashboard';
+import { Home, TrendingUp } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { language } = useLanguage();
@@ -20,7 +22,7 @@ export const App: React.FC = () => {
   // Primary Step Machine - starts at the Welcome / Getting Started page (Very first page)
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
 
-  // Form State for Owner Setup
+  // Form State for Owner Setup - starts with completely empty shopName so user enters own store name
   const [ownerData, setOwnerData] = useState<OwnerSetupData>({
     loginMethod: 'email',
     email: '',
@@ -39,6 +41,7 @@ export const App: React.FC = () => {
     else if (currentStep === 'owner-setup') setCurrentStep('role');
     else if (currentStep === 'owner-review') setCurrentStep('owner-setup');
     else if (currentStep === 'staff-flow') setCurrentStep('role');
+    else if (currentStep === 'sales-dashboard') setCurrentStep('owner-dashboard');
   };
 
   const handleResetAll = () => {
@@ -55,6 +58,49 @@ export const App: React.FC = () => {
       quickPin: '',
     });
   };
+
+  // Sales Dashboard view (accessible after login/dashboard, with fixed bottom navigation)
+  if (currentStep === 'sales-dashboard') {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex flex-col justify-between pb-24">
+        <Header
+          currentStep="sales-dashboard"
+          onBack={() => setCurrentStep('owner-dashboard')}
+          onReset={handleResetAll}
+        />
+        <main className="w-full flex-1 max-w-7xl mx-auto px-2 sm:px-4 py-4 animate-fadeIn">
+          <SalesDashboard
+            storeName={ownerData.shopName || localStorage.getItem('sgrocery_store_name') || ''}
+            onBackToHome={() => setCurrentStep('owner-dashboard')}
+          />
+        </main>
+        {/* Fixed bottom navigation bar */}
+        <nav
+          aria-label="Bottom Navigation"
+          className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-2xl shadow-slate-900/15 py-2.5 px-4 sm:px-8"
+        >
+          <div className="max-w-md mx-auto grid grid-cols-2 gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setCurrentStep('owner-dashboard')}
+              className="py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700"
+            >
+              <Home className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+              <span>Home Page</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentStep('sales-dashboard')}
+              className="py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer bg-[#008744] text-white shadow-lg shadow-emerald-700/30 scale-102"
+            >
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+              <span>Sales</span>
+            </button>
+          </div>
+        </nav>
+      </div>
+    );
+  }
 
   // Dashboard is full-screen — render it outside the onboarding shell
   if (currentStep === 'owner-dashboard') {

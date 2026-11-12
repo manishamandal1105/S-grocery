@@ -10,11 +10,11 @@
 
 /* Custom Glassmorphism & Card Styles */
 .glass-card {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 30px rgba(16, 185, 129, 0.1);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 25px rgba(16, 185, 129, 0.05);
 }
 
 .glass-card-light {
@@ -26,18 +26,27 @@
 }
 
 .glass-pill {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Hide scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Modern Input Styling */
 .grocery-input {
-  @apply w-full px-4 py-3.5 rounded-2xl border-2 border-slate-700/80 bg-slate-800/80 text-white placeholder-slate-400 font-medium transition-all duration-200;
+  @apply w-full px-4 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 font-medium transition-all duration-200;
 }
 
 .grocery-input:focus {
-  @apply border-emerald-400 ring-4 ring-emerald-500/20 outline-none bg-slate-800;
+  @apply border-emerald-500 ring-4 ring-emerald-500/15 outline-none bg-white;
 }
 
 .grocery-input-light {
@@ -46,6 +55,22 @@
 
 .grocery-input-light:focus {
   @apply border-emerald-500 ring-4 ring-emerald-500/15 outline-none bg-white;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
 }
 
 /* Waveform Bars Animation */
