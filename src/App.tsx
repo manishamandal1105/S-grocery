@@ -3,50 +3,55 @@ import { useLanguage } from './context/LanguageContext';
 import { OnboardingStep, OwnerSetupData, UserRole } from './types';
 import { useSoundEffects } from './hooks/useSoundEffects';
 import { Header } from './components/Header';
-import { WelcomeScreen } from './components/WelcomeScreen';
 import { SplashScreen } from './components/SplashScreen';
 import { LanguageSelectScreen } from './components/LanguageSelectScreen';
 import { RoleSelectScreen } from './components/RoleSelectScreen';
-import { OwnerSetupWizard } from './components/OwnerSetupWizard';
-import { ReviewConfirmScreen } from './components/ReviewConfirmScreen';
-import { OwnerWelcomeScreen } from './components/OwnerWelcomeScreen';
-import { StaffFlow } from './components/StaffFlow';
+import { OwnerLoginScreen } from './components/OwnerLoginScreen';
+import { EmployeeLoginScreen } from './components/EmployeeLoginScreen';
 import { OwnerDashboard } from './components/OwnerDashboard';
 import { SalesDashboard } from './components/SalesDashboard';
+import { StaffFlow } from './components/StaffFlow';
 import { Home, TrendingUp } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { language } = useLanguage();
   const soundFx = useSoundEffects();
 
-  // Primary Step Machine - starts at the Welcome / Getting Started page (Very first page)
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
+  // Primary Step Machine - starts at splash screen on initial launch
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>(() => {
+    const isLoggedIn = localStorage.getItem('sgrocery_is_logged_in') === 'true';
+    if (isLoggedIn) {
+      return 'owner-dashboard';
+    }
+    return 'splash';
+  });
 
-  // Form State for Owner Setup - starts with completely empty shopName so user enters own store name
-  const [ownerData, setOwnerData] = useState<OwnerSetupData>({
+  // State for user details
+  const [ownerData, setOwnerData] = useState<OwnerSetupData>(() => ({
     loginMethod: 'email',
-    email: '',
+    email: localStorage.getItem('sgrocery_user_email') || '',
     phone: '',
     password: '',
-    ownerName: '',
-    shopName: '',
+    ownerName: localStorage.getItem('sgrocery_owner_name') || '',
+    shopName: localStorage.getItem('sgrocery_store_name') || '',
     businessType: 'small',
     quickPin: '',
-  });
+  }));
 
   const handleStepBack = () => {
     soundFx.playClick();
-    if (currentStep === 'language') setCurrentStep('welcome');
+    if (currentStep === 'language') setCurrentStep('splash');
     else if (currentStep === 'role') setCurrentStep('language');
-    else if (currentStep === 'owner-setup') setCurrentStep('role');
-    else if (currentStep === 'owner-review') setCurrentStep('owner-setup');
-    else if (currentStep === 'staff-flow') setCurrentStep('role');
+    else if (currentStep === 'owner-login') setCurrentStep('role');
+    else if (currentStep === 'employee-login') setCurrentStep('role');
     else if (currentStep === 'sales-dashboard') setCurrentStep('owner-dashboard');
+    else if (currentStep === 'staff-flow') setCurrentStep('role');
   };
 
   const handleResetAll = () => {
     soundFx.playClick();
-    setCurrentStep('welcome');
+    localStorage.removeItem('sgrocery_is_logged_in');
+    setCurrentStep('splash');
     setOwnerData({
       loginMethod: 'email',
       email: '',
@@ -104,81 +109,73 @@ export const App: React.FC = () => {
 
   // Dashboard is full-screen — render it outside the onboarding shell
   if (currentStep === 'owner-dashboard') {
-    return <OwnerDashboard data={ownerData} onReset={handleResetAll} />;
+    return (
+      <OwnerDashboard
+        data={ownerData}
+        onReset={handleResetAll}
+        onNavigateToSales={() => setCurrentStep('sales-dashboard')}
+      />
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#fbfcf9] text-slate-800 relative selection:bg-emerald-600 selection:text-white">
-      {/* Top Header Controls (Hidden on Welcome screen to match the exact mockup) */}
-      {currentStep !== 'splash' && currentStep !== 'welcome' && (
-        <Header
-          currentStep={currentStep}
-          onBack={
-            currentStep !== 'owner-welcome'
-              ? handleStepBack
-              : undefined
-          }
-          onReset={handleResetAll}
-        />
-      )}
-
-      {/* Main Viewport matching full-screen responsive across all devices */}
+      {/* Onboarding Steps: Full-screen responsive viewport without top header interference on image-based auth pages */}
       <main className="w-full flex-1 flex flex-col justify-between bg-[#fbfcf9] relative">
-        {currentStep === 'welcome' && (
-          <WelcomeScreen
-            onGetStarted={() => setCurrentStep('language')}
-            onSkip={() => setCurrentStep('language')}
-          />
-        )}
-
+        {/* 1. Splash Screen (5 seconds -> language) */}
         {currentStep === 'splash' && (
           <SplashScreen onComplete={() => setCurrentStep('language')} />
         )}
 
+        {/* 2. Choose Language Page */}
         {currentStep === 'language' && (
           <LanguageSelectScreen
             onContinue={() => setCurrentStep('role')}
-            onBack={() => setCurrentStep('welcome')}
+            onBack={() => setCurrentStep('splash')}
           />
         )}
 
+        {/* 3. Role Selection Page */}
         {currentStep === 'role' && (
           <RoleSelectScreen
             onSelectRole={(role: UserRole) => {
-              if (role === 'owner') setCurrentStep('owner-setup');
-              else setCurrentStep('staff-flow');
+              if (role === 'owner') {
+                setCurrentStep('owner-login');
+              } else {
+                setCurrentStep('employee-login');
+              }
             }}
             onBack={() => setCurrentStep('language')}
           />
         )}
 
-        {currentStep === 'owner-setup' && (
-          <OwnerSetupWizard
-            initialData={ownerData}
-            onSubmitForReview={(data) => {
-              setOwnerData(data);
-              setCurrentStep('owner-review');
-            }}
+        {/* 4. Shop Owner Login Page */}
+        {currentStep === 'owner-login' && (
+          <OwnerLoginScreen
             onBack={() => setCurrentStep('role')}
+            onLoginSuccess={(loginData) => {
+              setOwnerData((prev) => ({
+                ...prev,
+                ownerName: loginData.ownerName,
+                shopName: loginData.shopName,
+                email: loginData.email,
+              }));
+              setCurrentStep('owner-dashboard');
+            }}
           />
         )}
 
-        {currentStep === 'owner-review' && (
-          <ReviewConfirmScreen
-            data={ownerData}
-            onConfirm={() => setCurrentStep('owner-welcome')}
-            onEdit={() => setCurrentStep('owner-setup')}
+        {/* 5. Employee / Staff Login Page */}
+        {currentStep === 'employee-login' && (
+          <EmployeeLoginScreen
+            onBack={() => setCurrentStep('role')}
+            onLoginSuccess={(loginData) => {
+              setCurrentStep('owner-dashboard');
+            }}
           />
         )}
 
-        {currentStep === 'owner-welcome' && (
-          <OwnerWelcomeScreen
-            data={ownerData}
-            onReset={handleResetAll}
-            onGoToDashboard={() => setCurrentStep('owner-dashboard')}
-          />
-        )}
-
+        {/* Fallback for Staff POS */}
         {currentStep === 'staff-flow' && (
           <StaffFlow
             onBackToRole={() => setCurrentStep('role')}

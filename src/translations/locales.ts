@@ -24,9 +24,19 @@ export const translations = {
     pageAudioForgotPassword: "পাসওয়ার্ড পুনরুদ্ধারের জন্য আপনার রেজিস্টার্ড ইমেইল বা ফোন নম্বর দিন।",
 
     // Language Selection Feedback
-    langSelectedBn: "আপনি বাংলা ভাষা নির্বাচন করেছেন",
-    langSelectedEn: "আপনি ইংরেজি ভাষা নির্বাচন করেছেন",
-    langSelectedHi: "আপনি হিন্দি ভাষা নির্বাচন করেছেন",
+    langSelectedBn: "আপনি বাংলা ভাষা নির্বাচন করেছেন।",
+    langSelectedEn: "You selected English language.",
+    langSelectedHi: "आपने हिंदी भाषा चुनी है।",
+    voiceSelectRole: "আপনার ভূমিকা নির্বাচন করুন।",
+    voiceFieldName: "নাম",
+    voiceFieldStoreName: "দোকানের নাম",
+    voiceFieldEmail: "ইমেল ঠিকানা",
+    voiceFieldPassword: "পাসওয়ার্ড",
+    voiceFieldBusinessType: "ব্যবসার ধরন",
+    voiceFieldPasscode: "পাসকোড",
+    businessTypeRetail: "Retail Shop",
+    businessTypeSupply: "Shop & Supply",
+    businessTypeWholesale: "Wholesale",
 
     // Role Selection Feedback
     roleOwnerSelected: "আপনি নির্বাচন করেছেন: আমি দোকানের মালিক",
@@ -269,9 +279,19 @@ export const translations = {
     pageAudioForgotPassword: "Enter your registered email or phone number to recover your password",
 
     // Language Selection Feedback
-    langSelectedBn: "You selected Bengali language.",
+    langSelectedBn: "আপনি বাংলা ভাষা নির্বাচন করেছেন।",
     langSelectedEn: "You selected English language.",
-    langSelectedHi: "You selected Hindi language.",
+    langSelectedHi: "आपने हिंदी भाषा चुनी है।",
+    voiceSelectRole: "Select your role.",
+    voiceFieldName: "Name",
+    voiceFieldStoreName: "Store Name",
+    voiceFieldEmail: "Email Address",
+    voiceFieldPassword: "Password",
+    voiceFieldBusinessType: "Business Type",
+    voiceFieldPasscode: "Passcode",
+    businessTypeRetail: "Retail Shop",
+    businessTypeSupply: "Shop & Supply",
+    businessTypeWholesale: "Wholesale",
 
     // Role Selection Feedback
     roleOwnerSelected: "You selected: I am a shop owner",
@@ -514,9 +534,19 @@ export const translations = {
     pageAudioForgotPassword: "पासवर्ड रीसेट करने के लिए अपना पंजीकृत ईमेल या फ़ोन नंबर दर्ज करें।",
 
     // Language Selection Feedback
-    langSelectedBn: "आपने बंगाली भाषा चुनी है",
-    langSelectedEn: "आपने अंग्रेजी भाषा चुनी है",
-    langSelectedHi: "आपने हिंदी भाषा चुनी है",
+    langSelectedBn: "আপনি বাংলা ভাষা নির্বাচন করেছেন।",
+    langSelectedEn: "You selected English language.",
+    langSelectedHi: "आपने हिंदी भाषा चुनी है।",
+    voiceSelectRole: "अपनी भूमिका चुनें।",
+    voiceFieldName: "नाम",
+    voiceFieldStoreName: "दुकान का नाम",
+    voiceFieldEmail: "ईमेल पता",
+    voiceFieldPassword: "पासवर्ड",
+    voiceFieldBusinessType: "व्यापार का प्रकार",
+    voiceFieldPasscode: "पासकोड",
+    businessTypeRetail: "Retail Shop",
+    businessTypeSupply: "Shop & Supply",
+    businessTypeWholesale: "Wholesale",
 
     // Role Selection Feedback
     roleOwnerSelected: "आपने चुना है: मैं दुकान का मालिक हूँ",

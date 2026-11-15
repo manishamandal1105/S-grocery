@@ -2,6 +2,8 @@ export type Language = 'bn' | 'en' | 'hi';
 
 export type ShopType = 'small' | 'medium' | 'large';
 
+export type BusinessTypeOption = 'Retail Shop' | 'Shop & Supply' | 'Wholesale';
+
 export type UserRole = 'owner' | 'helper';
 
 export type OnboardingStep =
@@ -9,6 +11,8 @@ export type OnboardingStep =
   | 'splash'
   | 'language'
   | 'role'
+  | 'owner-login'
+  | 'employee-login'
   | 'owner-setup'
   | 'owner-review'
   | 'owner-welcome'

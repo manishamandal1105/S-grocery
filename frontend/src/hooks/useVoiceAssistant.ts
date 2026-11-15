@@ -13,6 +13,23 @@ export function useVoiceAssistant() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceAvailable, setVoiceAvailable] = useState(true);
   const recognitionRef = useRef<any>(null);
+  const currentCallbackRef = useRef<((text: string) => void) | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        voicesRef.current = window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const win = window as unknown as IWindow;
@@ -37,6 +54,9 @@ export function useVoiceAssistant() {
         const current = event.resultIndex;
         const text = event.results[current][0].transcript;
         setTranscript(text);
+        if (event.results[current].isFinal && currentCallbackRef.current) {
+          currentCallbackRef.current(text);
+        }
       };
 
       recognition.onerror = (event: any) => {
@@ -56,7 +76,9 @@ export function useVoiceAssistant() {
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
       }
     };
   }, [speechLocale]);
@@ -66,25 +88,15 @@ export function useVoiceAssistant() {
       setIsListening(true);
       setTimeout(() => {
         setIsListening(false);
-      }, 3000);
+        if (onResultText) onResultText('Fresh Daily Mart');
+      }, 1500);
       return;
     }
 
     try {
       setTranscript('');
       recognitionRef.current.lang = speechLocale;
-      
-      if (onResultText) {
-        recognitionRef.current.onresult = (event: any) => {
-          const current = event.resultIndex;
-          const text = event.results[current][0].transcript;
-          setTranscript(text);
-          if (event.results[current].isFinal) {
-            onResultText(text);
-          }
-        };
-      }
-
+      currentCallbackRef.current = onResultText || null;
       recognitionRef.current.start();
     } catch (err) {
       console.warn('Microphone start error:', err);
@@ -94,32 +106,121 @@ export function useVoiceAssistant() {
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
     }
     setIsListening(false);
   }, []);
 
-  const speak = useCallback((text: string) => {
-    if (!('speechSynthesis' in window)) return;
+  const speak = useCallback((text: string, customLocale?: string, onEnd?: () => void) => {
+    if (!text) {
+      if (onEnd) onEnd();
+      return;
+    }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = speechLocale;
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch (e) {}
+      activeAudioRef.current = null;
+    }
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    const targetLocale = customLocale || speechLocale;
+    const langCode = targetLocale.split('-')[0].toLowerCase();
 
-    window.speechSynthesis.speak(utterance);
+    const playViaSpeechSynthesis = () => {
+      if (!('speechSynthesis' in window)) {
+        if (onEnd) onEnd();
+        return;
+      }
+
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = targetLocale;
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
+        
+        let matchingVoice = voices.find((v) => {
+          const l = v.lang.toLowerCase().replace('_', '-');
+          const n = v.name.toLowerCase();
+          return l.startsWith(langCode) || n.includes(langCode === 'bn' ? 'bangla' : langCode === 'hi' ? 'hindi' : 'english');
+        });
+
+        if (!matchingVoice && langCode === 'bn') {
+          matchingVoice = voices.find((v) => v.lang.toLowerCase().startsWith('hi') || v.lang.toLowerCase().startsWith('in'));
+        }
+
+        if (matchingVoice) {
+          utterance.voice = matchingVoice;
+        }
+
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          if (onEnd) onEnd();
+        };
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          if (onEnd) onEnd();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        setIsSpeaking(false);
+        if (onEnd) onEnd();
+      }
+    };
+
+    try {
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
+      const audio = new Audio(ttsUrl);
+      activeAudioRef.current = audio;
+
+      setIsSpeaking(true);
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            audio.onended = () => {
+              setIsSpeaking(false);
+              if (onEnd) onEnd();
+            };
+          })
+          .catch((err) => {
+            console.warn('Audio TTS fallback to SpeechSynthesis:', err);
+            playViaSpeechSynthesis();
+          });
+      }
+    } catch (e) {
+      playViaSpeechSynthesis();
+    }
   }, [speechLocale]);
 
   const stopSpeaking = useCallback(() => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch (e) {}
+      activeAudioRef.current = null;
     }
+
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
+    setIsSpeaking(false);
   }, []);
 
   return {

@@ -165,32 +165,17 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
     soundFx.playClick();
     setErrorMessage('');
 
-    if (formData.loginMethod === 'email') {
-      if (!formData.email.trim()) {
-        const error = t('errorEmptyEmail');
-        setErrorMessage(error);
-        speak(error);
-        return;
-      }
-      if (!formData.email.includes('@') || !formData.email.includes('.')) {
-        const error = t('errorInvalidEmail');
-        setErrorMessage(error);
-        speak(error);
-        return;
-      }
-    } else {
-      if (!formData.phone.trim()) {
-        const error = t('errorEmptyPhone');
-        setErrorMessage(error);
-        speak(error);
-        return;
-      }
-      if (formData.phone.trim().length < 6) {
-        const error = t('errorInvalidPhone');
-        setErrorMessage(error);
-        speak(error);
-        return;
-      }
+    if (!formData.email.trim()) {
+      const error = t('errorEmptyEmail');
+      setErrorMessage(error);
+      speak(error);
+      return;
+    }
+    if (!formData.email.includes('@') || !formData.email.includes('.')) {
+      const error = t('errorInvalidEmail');
+      setErrorMessage(error);
+      speak(error);
+      return;
     }
 
     if (!formData.password) {
@@ -483,84 +468,26 @@ export const OwnerSetupWizard: React.FC<OwnerSetupWizardProps> = ({
             </div>
           )}
 
-          {/* Segmented Toggle: Email vs Phone Number */}
-          <div className="px-4 sm:px-6 mb-5 max-w-xs sm:max-w-sm mx-auto">
-            <div className="grid grid-cols-2 p-1 rounded-2xl bg-[#edf4ee] border border-[#dce8e0]">
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  handleChange('loginMethod', 'email');
-                }}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  formData.loginMethod === 'email'
-                    ? 'bg-[#235338] text-white shadow-sm'
-                    : 'text-[#486354] hover:text-[#1b3a2b]'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>{t('loginEmailTab')}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  handleChange('loginMethod', 'phone');
-                }}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  formData.loginMethod === 'phone'
-                    ? 'bg-[#235338] text-white shadow-sm'
-                    : 'text-[#486354] hover:text-[#1b3a2b]'
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>{t('loginPhoneTab')}</span>
-              </button>
-            </div>
-          </div>
-
           {/* Form Inputs (Comfortable Centered Container on Tablet & Desktop) */}
           <form onSubmit={handleNextFromCredentials} className="w-full max-w-md sm:max-w-lg mx-auto px-4 sm:px-6 space-y-4">
-            {formData.loginMethod === 'email' ? (
-              <div>
-                <label className="block text-xs font-bold text-[#1b3a2b] mb-1.5">
-                  {t('emailLabel')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e7768]">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder={t('emailPlaceholder')}
-                    className="w-full bg-white border border-[#dce8e0] rounded-2xl py-3 px-4 pl-10 text-sm font-medium text-[#1b3a2b] placeholder-[#94a39a] focus:border-[#235338] focus:ring-2 focus:ring-[#235338]/15 outline-none shadow-xs transition-all"
-                    autoFocus
-                  />
+            <div>
+              <label className="block text-xs font-bold text-[#1b3a2b] mb-1.5">
+                {t('emailLabel')}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e7768]">
+                  <Mail className="w-4 h-4" />
                 </div>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  placeholder={t('emailPlaceholder')}
+                  className="w-full bg-white border border-[#dce8e0] rounded-2xl py-3 px-4 pl-10 text-sm font-medium text-[#1b3a2b] placeholder-[#94a39a] focus:border-[#235338] focus:ring-2 focus:ring-[#235338]/15 outline-none shadow-xs transition-all"
+                  autoFocus
+                />
               </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-bold text-[#1b3a2b] mb-1.5">
-                  {t('phoneLabel')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e7768]">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                    placeholder={t('phonePlaceholder')}
-                    className="w-full bg-white border border-[#dce8e0] rounded-2xl py-3 px-4 pl-10 text-sm font-medium text-[#1b3a2b] placeholder-[#94a39a] focus:border-[#235338] focus:ring-2 focus:ring-[#235338]/15 outline-none shadow-xs transition-all"
-                    autoFocus
-                  />
-                </div>
-              </div>
-            )}
+            </div>
 
             {/* Password */}
             <div>
