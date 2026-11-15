@@ -48,6 +48,7 @@ interface OwnerDashboardProps {
   data: OwnerSetupData;
   onReset: () => void;
   initialMetrics?: Partial<DashboardMetrics>;
+  onNavigateToSales?: () => void;
 }
 
 // Crisp Vector Storefront Graphic matching the reference design
@@ -403,24 +404,24 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
 
               {/* Card 1: Today's Sales */}
-              <div className="bg-[#edf8f1] border border-[#dcf2e4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+              <div className="bg-[#edf8f1] dark:bg-slate-800 border border-[#dcf2e4] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-3">
                     <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00c569] text-white flex items-center justify-center font-bold text-2xl shadow-xs shrink-0">
                       ₹
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
                         Today's Sales
                       </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
                         ₹{metrics.todaySales.toLocaleString()}
                       </p>
                     </div>
                   </div>
 
                   {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#daf5e3] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#daf5e3] dark:bg-emerald-950/60 flex items-center justify-center shrink-0">
                     <svg viewBox="0 0 28 20" className="w-5 h-4">
                       <path
                         d="M2 17 L8 11 L14 14 L23 4"
@@ -442,34 +443,34 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-emerald-950/5">
-                  <span className="font-bold text-[#00c569] flex items-center">
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-emerald-950/5 dark:border-slate-700">
+                  <span className="font-bold text-[#00c569] dark:text-emerald-400 flex items-center">
                     <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
                     {metrics.salesGrowth}%
                   </span>
-                  <span className="text-[#6b7280]">from yesterday</span>
+                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
                 </div>
               </div>
 
               {/* Card 2: Today's Purchases */}
-              <div className="bg-[#eef6fe] border border-[#d8eafc] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+              <div className="bg-[#eef6fe] dark:bg-slate-800 border border-[#d8eafc] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-3">
                     <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0084ff] text-white flex items-center justify-center shadow-xs shrink-0">
                       <ShoppingCart className="w-6 h-6 stroke-[2.2]" />
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
                         Today's Purchases
                       </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
                         ₹{metrics.todayPurchases.toLocaleString()}
                       </p>
                     </div>
                   </div>
 
                   {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#dff0ff] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#dff0ff] dark:bg-blue-950/60 flex items-center justify-center shrink-0">
                     <svg viewBox="0 0 28 20" className="w-5 h-4">
                       <path
                         d="M2 17 L8 11 L14 14 L23 4"
@@ -491,34 +492,34 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-blue-950/5">
-                  <span className="font-bold text-[#0084ff] flex items-center">
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-blue-950/5 dark:border-slate-700">
+                  <span className="font-bold text-[#0084ff] dark:text-blue-400 flex items-center">
                     <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
                     {metrics.purchasesGrowth}%
                   </span>
-                  <span className="text-[#6b7280]">from yesterday</span>
+                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
                 </div>
               </div>
 
               {/* Card 3: Today's Expenses */}
-              <div className="bg-[#fff6ec] border border-[#fde8d4] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+              <div className="bg-[#fff6ec] dark:bg-slate-800 border border-[#fde8d4] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-3">
                     <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#ff8000] text-white flex items-center justify-center shadow-xs shrink-0">
                       <Wallet className="w-6 h-6 stroke-[2.2]" />
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
                         Today's Expenses
                       </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
                         ₹{metrics.todayExpenses.toLocaleString()}
                       </p>
                     </div>
                   </div>
 
                   {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#ffeed9] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#ffeed9] dark:bg-amber-950/60 flex items-center justify-center shrink-0">
                     <svg viewBox="0 0 28 20" className="w-5 h-4">
                       <path
                         d="M2 13 L7 17 L13 9 L19 14 L25 5"
@@ -532,17 +533,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-amber-950/5">
-                  <span className="font-bold text-[#ff8000] flex items-center">
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-amber-950/5 dark:border-slate-700">
+                  <span className="font-bold text-[#ff8000] dark:text-amber-400 flex items-center">
                     <ArrowDown className="w-3.5 h-3.5 stroke-[2.5]" />
                     {metrics.expensesGrowth}%
                   </span>
-                  <span className="text-[#6b7280]">from yesterday</span>
+                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
                 </div>
               </div>
 
               {/* Card 4: Today's Profit/Loss (Default 0 as instructed) */}
-              <div className="bg-[#f8f2fe] border border-[#ecdcff] rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+              <div className="bg-[#f8f2fe] dark:bg-slate-800 border border-[#ecdcff] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-3">
                     <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#8a2be2] text-white flex items-center justify-center shadow-xs shrink-0">
@@ -554,17 +555,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] leading-snug">
+                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
                         Today's Profit/Loss
                       </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight mt-1">
+                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
                         ₹{metrics.todayProfitLoss.toLocaleString()}
                       </p>
                     </div>
                   </div>
 
                   {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#f3e8ff] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#f3e8ff] dark:bg-purple-950/60 flex items-center justify-center shrink-0">
                     <svg viewBox="0 0 28 20" className="w-5 h-4">
                       <path
                         d="M2 16 L8 12 L13 15 L18 8 L24 10"
@@ -578,12 +579,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-purple-950/5">
-                  <span className="font-bold text-[#8a2be2] flex items-center">
+                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-purple-950/5 dark:border-slate-700">
+                  <span className="font-bold text-[#8a2be2] dark:text-purple-400 flex items-center">
                     <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
                     {metrics.profitLossGrowth}%
                   </span>
-                  <span className="text-[#6b7280]">from yesterday</span>
+                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
                 </div>
               </div>
 
@@ -594,13 +595,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
 
             {/* LEFT: DAILY SALES OVERVIEW (CHART) - Occupies 7 columns on Desktop */}
-            <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
+            <div className="lg:col-span-7 bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700 p-5 sm:p-6 shadow-xs touch-pan-y">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-[#111827]">
+                  <h2 className="text-base sm:text-lg font-bold text-[#111827] dark:text-white">
                     Daily Sales Overview
                   </h2>
-                  <p className="text-xs text-[#6b7280] font-normal mt-0.5">
+                  <p className="text-xs text-[#6b7280] dark:text-slate-400 font-normal mt-0.5">
                     Real-time Hourly Performance
                   </p>
                 </div>
@@ -611,7 +612,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     soundFx.playClick();
                     setActiveTab('reports');
                   }}
-                  className="text-xs sm:text-sm font-semibold text-[#1877f2] hover:underline flex items-center gap-0.5 cursor-pointer"
+                  className="text-xs sm:text-sm font-semibold text-[#1877f2] dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>View Report</span>
                   <ChevronRight className="w-4 h-4 stroke-[2.5]" />
@@ -620,17 +621,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
               {/* Total Sales Value */}
               <div className="mt-3 mb-4">
-                <p className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight">
                   ₹{metrics.todaySales.toLocaleString()}
                 </p>
-                <p className="text-xs text-[#6b7280] font-normal mt-0.5">
+                <p className="text-xs text-[#6b7280] dark:text-slate-400 font-normal mt-0.5">
                   Total Sales Today
                 </p>
               </div>
 
-              {/* Responsive Line Chart SVG */}
-              <div className="w-full pt-2">
-                <svg viewBox="0 0 500 150" className="w-full h-44 sm:h-52 overflow-visible" preserveAspectRatio="none">
+              {/* Responsive Line Chart SVG (With touch-pan-y & pointer-events-none so scrolling smoothly continues) */}
+              <div className="w-full pt-2 touch-pan-y">
+                <svg viewBox="0 0 500 150" className="w-full h-44 sm:h-52 overflow-visible pointer-events-none touch-pan-y" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#00c569" stopOpacity="0.25" />
@@ -703,7 +704,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 </svg>
 
                 {/* X-Axis Time Markers */}
-                <div className="flex justify-between items-center text-xs text-[#6b7280] font-medium pt-2 pl-9 pr-1">
+                <div className="flex justify-between items-center text-xs text-[#6b7280] dark:text-slate-400 font-medium pt-2 pl-9 pr-1">
                   <span>6 AM</span>
                   <span>9 AM</span>
                   <span>12 PM</span>
@@ -715,19 +716,19 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             </div>
 
             {/* RIGHT: NEEDS YOUR ATTENTION - Occupies 5 columns on Desktop */}
-            <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+            <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3.5">
-                  <h2 className="text-base sm:text-lg font-bold text-[#111827]">
+                  <h2 className="text-base sm:text-lg font-bold text-[#111827] dark:text-white">
                     Needs Your Attention
                   </h2>
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                     Live Stock Status
                   </span>
                 </div>
 
                 {/* 3 Attention Items matching the reference image */}
-                <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
+                <div className="divide-y divide-slate-100 dark:divide-slate-700 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden">
                   {/* Item 1: Out of Stock */}
                   <div
                     onClick={() => {
@@ -736,17 +737,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     }}
                     role="button"
                     tabIndex={0}
-                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#ff4d4f] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
                         <X className="w-4 h-4 stroke-[3]" />
                       </div>
-                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151] dark:text-slate-200">
                         {metrics.outOfStockCount} products are out of stock
                       </span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:translate-x-0.5 transition-transform" />
                   </div>
 
                   {/* Item 2: Low Stock */}
@@ -757,17 +758,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     }}
                     role="button"
                     tabIndex={0}
-                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#faad14] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
                         <span className="text-base font-extrabold leading-none pb-0.5">!</span>
                       </div>
-                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151] dark:text-slate-200">
                         {metrics.lowStockCount} products are low in stock
                       </span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:translate-x-0.5 transition-transform" />
                   </div>
 
                   {/* Item 3: Expiring Soon */}
@@ -778,17 +779,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     }}
                     role="button"
                     tabIndex={0}
-                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#1890ff] text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
                         <Clock className="w-4 h-4 stroke-[2.5]" />
                       </div>
-                      <span className="text-xs sm:text-sm font-semibold text-[#374151]">
+                      <span className="text-xs sm:text-sm font-semibold text-[#374151] dark:text-slate-200">
                         {metrics.expiringCount} products are expiring soon
                       </span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
               </div>

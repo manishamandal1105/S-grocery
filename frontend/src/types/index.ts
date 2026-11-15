@@ -55,3 +55,4 @@ export interface SalesSummaryData {
   digitalSales: number;
   creditSales: number;
 }
+

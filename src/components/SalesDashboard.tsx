@@ -328,138 +328,27 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
   const maxTrendAmount = Math.max(1500, ...dailyTrend.map((d) => d.amount));
 
   return (
-    <div className="w-full max-w-5xl mx-auto pb-28 px-3 sm:px-6 lg:px-8 animate-fadeIn">
-      {/* 1. TOP APP BAR */}
-      <div className="flex items-center justify-between py-3 mb-2">
-        <div className="flex items-center gap-2.5">
-          {/* Back Button */}
-          <button
-            type="button"
-            onClick={onBackToHome}
-            title="Back to Home Page"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-200/70 transition-colors duration-150"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+    <div className="w-full max-w-7xl mx-auto pb-32 px-4 sm:px-6 lg:px-8 animate-fadeIn">
+      {/* 1. NEW SALES ACTION OPTION (Positioned above Sales Dashboard) */}
+      <div className="flex items-center justify-between pb-3.5 pt-1">
+        <button
+          type="button"
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[#008744] hover:bg-[#06723b] text-white font-extrabold text-sm sm:text-base shadow-md shadow-emerald-700/25 active:scale-95 transition-all cursor-pointer"
+        >
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3]" />
+          <span>New Sales</span>
+        </button>
 
-          {/* Store Logo & Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowStoreDropdown(!showStoreDropdown)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-100 transition-colors"
-            >
-              {/* Colorful Store SVG Icon */}
-              <div className="w-8 h-8 rounded-lg bg-emerald-100/90 flex items-center justify-center text-emerald-700 shadow-sm border border-emerald-200/60">
-                <span className="text-base select-none">🏪</span>
-              </div>
-              <span className="font-bold text-slate-800 text-sm sm:text-base tracking-tight">
-                {summary.storeName}
-              </span>
-              <ChevronDown className="w-4 h-4 text-slate-500" />
-            </button>
-
-            {/* Store Name Dropdown / Quick Rename */}
-            {showStoreDropdown && (
-              <div className="absolute left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-3 z-30 animate-fadeIn">
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Edit Store Name
-                </p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={summary.storeName}
-                    onChange={(e) => setSummary((prev) => ({ ...prev, storeName: e.target.value }))}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500"
-                    placeholder="Enter store name"
-                  />
-                  <button
-                    onClick={() => setShowStoreDropdown(false)}
-                    className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Action Icons: Notification Bell & Menu */}
-        <div className="flex items-center gap-1.5">
-          {/* Bell Icon with Red Dot 1 */}
-          <button
-            type="button"
-            onClick={() => setShowNotificationToast(!showNotificationToast)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 relative transition-colors"
-            title="Notifications"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
-              1
-            </span>
-          </button>
-
-          {/* Three Dots Menu */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowMenuDropdown(!showMenuDropdown)}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors"
-              title="More options"
-            >
-              <MoreVertical className="w-5 h-5" />
-            </button>
-
-            {/* Dropdown Menu */}
-            {showMenuDropdown && (
-              <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-2 z-30 animate-fadeIn">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditAllModal(true);
-                    setShowMenuDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2"
-                >
-                  <Edit2 className="w-4 h-4 text-emerald-600" />
-                  <span>Manual Numbers Entry</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(true);
-                    setShowMenuDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4 text-emerald-600" />
-                  <span>Add New Transaction</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetToZero}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4 text-red-500" />
-                  <span>Reset All to ₹0.00</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowEditAllModal(true)}
+          className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+        >
+          <Edit2 className="w-3.5 h-3.5" />
+          <span>Manual Entry</span>
+        </button>
       </div>
-
-      {/* Notification Toast */}
-      {showNotificationToast && (
-        <div className="mb-3 p-3 bg-white rounded-2xl border border-emerald-100 shadow-md flex items-center justify-between text-xs text-slate-700">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>🔔 Ready for business! Tap any card or amount to enter your sales manually.</span>
-          </div>
-          <button onClick={() => setShowNotificationToast(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-        </div>
-      )}
 
       {/* 2. SALES DASHBOARD HERO BANNER */}
       <div className="w-full rounded-3xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 text-white p-5 sm:p-6 shadow-xl shadow-emerald-600/25 relative overflow-hidden">
@@ -502,28 +391,12 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
         </div>
       </div>
 
-      {/* Quick Action Helper Pill */}
-      <div className="mt-3 flex items-center justify-between bg-emerald-50/80 border border-emerald-100/90 rounded-2xl px-3.5 py-2 text-xs">
-        <div className="flex items-center gap-1.5 text-emerald-900 font-medium truncate">
-          <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-          <span className="truncate">All values set to 0. Click any number to type your manual amount.</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowEditAllModal(true)}
-          className="shrink-0 ml-2 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 transition-colors"
-        >
-          <Edit2 className="w-3 h-3" />
-          <span>Manual Entry</span>
-        </button>
-      </div>
-
       {/* 3. TOP 3 KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-4">
         {/* CARD 1: Today's Total Sales */}
         <div
           onClick={() => startInlineEdit('todaySales', summary.todaySales)}
-          className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group relative overflow-hidden"
+          className="bg-white dark:bg-slate-800 rounded-3xl p-4 border border-slate-200/80 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-600 transition-all cursor-pointer group relative overflow-hidden"
           title="Click to enter Today's Total Sales"
         >
           <div className="flex items-center gap-3">
@@ -532,15 +405,15 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-500 font-semibold truncate">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold truncate">
                   Today's Total Sales
                 </p>
-                <Edit2 className="w-3 h-3 text-slate-300 group-hover:text-emerald-600 transition-colors" />
+                <Edit2 className="w-3 h-3 text-slate-300 dark:text-slate-500 group-hover:text-emerald-600 transition-colors" />
               </div>
 
               {inlineEditingField === 'todaySales' ? (
                 <div className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
-                  <span className="font-bold text-slate-700 text-sm">₹</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">₹</span>
                   <input
                     type="number"
                     step="0.01"
@@ -551,7 +424,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                       if (e.key === 'Enter') saveInlineEdit();
                       if (e.key === 'Escape') setInlineEditingField(null);
                     }}
-                    className="w-full px-2 py-0.5 text-base font-extrabold border-2 border-emerald-500 rounded-lg outline-none"
+                    className="w-full px-2 py-0.5 text-base font-extrabold border-2 border-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg outline-none"
                   />
                   <button
                     onClick={saveInlineEdit}
@@ -561,7 +434,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   </button>
                 </div>
               ) : (
-                <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
                   ₹{summary.todaySales.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               )}
@@ -572,7 +445,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
         {/* CARD 2: Total Transactions */}
         <div
           onClick={() => startInlineEdit('totalTransactions', summary.totalTransactions)}
-          className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group relative overflow-hidden"
+          className="bg-white dark:bg-slate-800 rounded-3xl p-4 border border-slate-200/80 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all cursor-pointer group relative overflow-hidden"
           title="Click to enter Total Transactions"
         >
           <div className="flex items-center gap-3">
@@ -581,10 +454,10 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-500 font-semibold truncate">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold truncate">
                   Total Transactions
                 </p>
-                <Edit2 className="w-3 h-3 text-slate-300 group-hover:text-blue-600 transition-colors" />
+                <Edit2 className="w-3 h-3 text-slate-300 dark:text-slate-500 group-hover:text-blue-600 transition-colors" />
               </div>
 
               {inlineEditingField === 'totalTransactions' ? (
@@ -599,7 +472,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                       if (e.key === 'Enter') saveInlineEdit();
                       if (e.key === 'Escape') setInlineEditingField(null);
                     }}
-                    className="w-full px-2 py-0.5 text-base font-extrabold border-2 border-blue-500 rounded-lg outline-none"
+                    className="w-full px-2 py-0.5 text-base font-extrabold border-2 border-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg outline-none"
                   />
                   <button
                     onClick={saveInlineEdit}
@@ -609,7 +482,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   </button>
                 </div>
               ) : (
-                <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
                   {summary.totalTransactions}
                 </p>
               )}
@@ -620,16 +493,16 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
         {/* CARD 3: Estimated Daily Profit */}
         <div
           onClick={() => startInlineEdit('estimatedProfit', summary.estimatedProfit)}
-          className="bg-amber-50/70 rounded-3xl p-4 border border-amber-200/70 shadow-sm hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group relative overflow-hidden"
+          className="bg-amber-50/70 dark:bg-slate-800 rounded-3xl p-4 border border-amber-200/70 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-amber-300 dark:hover:border-amber-500 transition-all cursor-pointer group relative overflow-hidden"
           title="Click to enter Estimated Profit"
         >
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <TrendingUp className="w-5 h-5 text-emerald-700 stroke-[2.5]" />
+            <div className="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <TrendingUp className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-600 font-semibold truncate">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold truncate">
                   Estimated Daily Profit
                 </p>
                 <Edit2 className="w-3 h-3 text-amber-400 group-hover:text-amber-600 transition-colors" />
@@ -637,7 +510,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
 
               {inlineEditingField === 'estimatedProfit' ? (
                 <div className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
-                  <span className="font-bold text-slate-700 text-sm">₹</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">₹</span>
                   <input
                     type="number"
                     step="0.01"
@@ -648,7 +521,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                       if (e.key === 'Enter') saveInlineEdit();
                       if (e.key === 'Escape') setInlineEditingField(null);
                     }}
-                    className="w-full px-2 py-0.5 text-base font-extrabold border-2 border-amber-500 rounded-lg outline-none"
+                    className="w-full px-2 py-0.5 text-base font-extrabold border-2 border-amber-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg outline-none"
                   />
                   <button
                     onClick={saveInlineEdit}
@@ -658,7 +531,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   </button>
                 </div>
               ) : (
-                <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
                   ₹{summary.estimatedProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               )}
@@ -670,10 +543,10 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       {/* 4. GROWTH INDICATOR PILL */}
       <div
         onClick={() => startInlineEdit('growthPercentage', summary.growthPercentage)}
-        className="mt-3 bg-emerald-50/80 hover:bg-emerald-100/70 border border-emerald-100/90 rounded-2xl p-3 flex items-center justify-between text-xs font-bold text-emerald-800 transition-colors cursor-pointer group"
+        className="mt-3.5 bg-emerald-50/80 dark:bg-slate-800 hover:bg-emerald-100/70 dark:hover:bg-slate-750 border border-emerald-100/90 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-400 transition-colors cursor-pointer group"
       >
         <div className="flex items-center gap-1.5">
-          <TrendingUp className="w-4 h-4 text-emerald-600" />
+          <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           {inlineEditingField === 'growthPercentage' ? (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <input
@@ -685,7 +558,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   if (e.key === 'Enter') saveInlineEdit();
                   if (e.key === 'Escape') setInlineEditingField(null);
                 }}
-                className="w-16 px-1.5 py-0.5 border border-emerald-500 rounded bg-white text-xs font-bold"
+                className="w-16 px-1.5 py-0.5 border border-emerald-500 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-bold"
               />
               <span>% vs yesterday</span>
               <button onClick={saveInlineEdit} className="p-0.5 bg-emerald-600 text-white rounded">
@@ -696,42 +569,42 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
             <span>+{summary.growthPercentage}% vs yesterday</span>
           )}
         </div>
-        <ChevronRight className="w-4 h-4 text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
+        <ChevronRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
       </div>
 
       {/* 5. PAYMENT MODE BREAKDOWN */}
-      <div className="mt-3.5 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
+      <div className="mt-3.5 bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-100/80 flex items-center justify-center text-emerald-700">
+            <div className="w-7 h-7 rounded-lg bg-emerald-100/80 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
               <Wallet className="w-4 h-4" />
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white">
               Payment Mode Breakdown
             </h3>
           </div>
           <button
             type="button"
             onClick={() => setShowEditAllModal(true)}
-            className="text-[11px] text-emerald-700 font-semibold hover:underline flex items-center gap-1"
+            className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
           >
             <Edit2 className="w-3 h-3" />
             <span>Enter Amounts</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-3 divide-x divide-slate-100 gap-1.5 sm:gap-3 pt-1">
+        <div className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-700 gap-1.5 sm:gap-3 pt-1">
           {/* Cash Sales */}
           <div
             onClick={() => startInlineEdit('cashSales', summary.cashSales)}
-            className="px-2 py-1 cursor-pointer hover:bg-slate-50/80 rounded-xl transition-colors group"
+            className="px-2 py-1 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/50 rounded-xl transition-colors group"
             title="Click to enter Cash Sales"
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
                 <Banknote className="w-4 h-4" />
               </div>
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
                 Cash Sales
               </span>
             </div>
@@ -747,28 +620,28 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     if (e.key === 'Enter') saveInlineEdit();
                     if (e.key === 'Escape') setInlineEditingField(null);
                   }}
-                  className="w-full px-1 py-0.5 text-xs font-bold border border-emerald-500 rounded"
+                  className="w-full px-1 py-0.5 text-xs font-bold border border-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded"
                 />
               </div>
             ) : (
-              <p className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
                 ₹{summary.cashSales.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             )}
           </div>
 
-          {/* Digital / UPI / Card */}
+          {/* UPI (Renamed from Digital / UPI / Card as requested) */}
           <div
             onClick={() => startInlineEdit('digitalSales', summary.digitalSales)}
-            className="px-2 py-1 cursor-pointer hover:bg-slate-50/80 rounded-xl transition-colors group"
-            title="Click to enter Digital Sales"
+            className="px-2 py-1 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/50 rounded-xl transition-colors group"
+            title="Click to enter UPI Sales"
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center text-amber-600 group-hover:scale-105 transition-transform">
+              <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
                 <Smartphone className="w-4 h-4" />
               </div>
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
-                Digital / UPI / Card
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
+                UPI
               </span>
             </div>
             {inlineEditingField === 'digitalSales' ? (
@@ -783,11 +656,11 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     if (e.key === 'Enter') saveInlineEdit();
                     if (e.key === 'Escape') setInlineEditingField(null);
                   }}
-                  className="w-full px-1 py-0.5 text-xs font-bold border border-emerald-500 rounded"
+                  className="w-full px-1 py-0.5 text-xs font-bold border border-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded"
                 />
               </div>
             ) : (
-              <p className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
                 ₹{summary.digitalSales.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             )}
@@ -796,14 +669,14 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
           {/* Credit / Khata */}
           <div
             onClick={() => startInlineEdit('creditSales', summary.creditSales)}
-            className="px-2 py-1 cursor-pointer hover:bg-slate-50/80 rounded-xl transition-colors group"
+            className="px-2 py-1 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/50 rounded-xl transition-colors group"
             title="Click to enter Credit Sales"
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-700 group-hover:scale-105 transition-transform">
+              <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-700 dark:text-amber-400 group-hover:scale-105 transition-transform">
                 <Handshake className="w-4 h-4" />
               </div>
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
                 Credit / Khata
               </span>
             </div>
@@ -819,11 +692,11 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     if (e.key === 'Enter') saveInlineEdit();
                     if (e.key === 'Escape') setInlineEditingField(null);
                   }}
-                  className="w-full px-1 py-0.5 text-xs font-bold border border-emerald-500 rounded"
+                  className="w-full px-1 py-0.5 text-xs font-bold border border-emerald-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded"
                 />
               </div>
             ) : (
-              <p className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
                 ₹{summary.creditSales.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             )}
@@ -840,10 +713,10 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
               key={filter}
               type="button"
               onClick={() => setSelectedFilter(filter)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
                 isActive
                   ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
-                  : 'bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
               {filter === 'Custom' && <Calendar className="w-3.5 h-3.5" />}
@@ -854,20 +727,20 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       </div>
 
       {/* 7. SALES TREND (BAR CHART) */}
-      <div className="mt-4 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
+      <div className="mt-4 bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-100/80 flex items-center justify-center text-emerald-700">
+            <div className="w-7 h-7 rounded-lg bg-emerald-100/80 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
               <BarChart2 className="w-4 h-4" />
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white">
               Sales Trend
             </h3>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
               <span>Sales</span>
             </div>
@@ -885,7 +758,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   }
                 }
               }}
-              className="text-[10px] text-emerald-700 hover:underline font-semibold"
+              className="text-[10px] text-emerald-700 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
             >
               Set Days
             </button>
@@ -896,7 +769,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
         <div className="pt-2 pb-2">
           <div className="flex gap-2 sm:gap-4">
             {/* Y-Axis Labels */}
-            <div className="flex flex-col justify-between text-[10px] sm:text-[11px] font-semibold text-slate-400 text-right pr-1 w-8 sm:w-10 h-36">
+            <div className="flex flex-col justify-between text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-slate-500 text-right pr-1 w-8 sm:w-10 h-36">
               <span>1,500</span>
               <span>1,000</span>
               <span>500</span>
@@ -904,13 +777,13 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
             </div>
 
             {/* Bars Area with Grid Lines */}
-            <div className="flex-1 relative h-36 border-b border-slate-200">
+            <div className="flex-1 relative h-36 border-b border-slate-200 dark:border-slate-700">
               {/* Horizontal Grid lines */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                <div className="w-full border-t border-dashed border-slate-100"></div>
-                <div className="w-full border-t border-dashed border-slate-100"></div>
-                <div className="w-full border-t border-dashed border-slate-100"></div>
-                <div className="w-full border-t border-slate-200"></div>
+                <div className="w-full border-t border-dashed border-slate-100 dark:border-slate-800"></div>
+                <div className="w-full border-t border-dashed border-slate-100 dark:border-slate-800"></div>
+                <div className="w-full border-t border-dashed border-slate-100 dark:border-slate-800"></div>
+                <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
               </div>
 
               {/* Day Bars */}
@@ -942,7 +815,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                         className={`w-full max-w-[28px] rounded-t-md transition-all duration-300 ${
                           item.amount > 0
                             ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 group-hover:from-emerald-700 group-hover:to-emerald-500'
-                            : 'bg-emerald-200/40 hover:bg-emerald-300/60'
+                            : 'bg-emerald-200/40 dark:bg-emerald-950/40 hover:bg-emerald-300/60'
                         }`}
                         style={{ height: `${Math.max(4, heightPercent)}%` }}
                       ></div>
@@ -954,7 +827,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
           </div>
 
           {/* X-Axis Labels (Days) */}
-          <div className="flex justify-between pl-9 sm:pl-12 pr-1 sm:pr-3 mt-2 text-[11px] font-bold text-slate-500">
+          <div className="flex justify-between pl-9 sm:pl-12 pr-1 sm:pr-3 mt-2 text-[11px] font-bold text-slate-500 dark:text-slate-400">
             {dailyTrend.map((item) => (
               <span key={item.day} className="flex-1 text-center max-w-[36px]">
                 {item.day}
@@ -965,14 +838,14 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       </div>
 
       {/* 8. TRANSACTION HISTORY */}
-      <div className="mt-4 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
+      <div className="mt-4 bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-100/80 flex items-center justify-center text-emerald-700">
+            <div className="w-7 h-7 rounded-lg bg-emerald-100/80 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
               <Receipt className="w-4 h-4" />
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white">
               Transaction History
             </h3>
           </div>
@@ -981,7 +854,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
             <button
               type="button"
               onClick={() => setShowAddModal(true)}
-              className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Sale</span>
@@ -998,7 +871,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
         </div>
 
         {/* Transactions Table/List */}
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700">
           {transactions.map((tx) => (
             <div
               key={tx.id}
@@ -1011,58 +884,58 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   );
                 }
               }}
-              className="py-3 flex items-center justify-between gap-2 hover:bg-slate-50/80 rounded-xl px-2 transition-colors cursor-pointer group"
+              className="py-3 flex items-center justify-between gap-2 hover:bg-slate-50/80 dark:hover:bg-slate-750 rounded-xl px-2 transition-colors cursor-pointer group"
               title="Click to edit transaction amount"
             >
               {/* Left: Time & Invoice */}
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-emerald-600 transition-colors shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-300 group-hover:text-emerald-600 transition-colors shrink-0">
                   <span className="text-xs select-none">🕒</span>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-800">{tx.time}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">{tx.invoiceNo}</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-white">{tx.time}</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-400 font-medium">{tx.invoiceNo}</p>
                 </div>
               </div>
 
               {/* Middle: Customer Name */}
-              <div className="hidden sm:block text-xs font-medium text-slate-600 truncate max-w-[130px]">
+              <div className="hidden sm:block text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[130px]">
                 {tx.customerName}
               </div>
 
               {/* Right: Amount & Payment Mode Badge & Chevron */}
               <div className="flex items-center gap-2.5 shrink-0">
-                <span className="text-sm font-black text-slate-900">
+                <span className="text-sm font-black text-slate-900 dark:text-white">
                   ₹{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
 
                 {/* Badge based on payment mode */}
                 {tx.paymentMode === 'Cash' && (
-                  <span className="px-2 py-0.5 rounded-lg bg-emerald-100/80 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold flex items-center gap-1">
                     <Banknote className="w-3 h-3" />
                     <span>Cash</span>
                   </span>
                 )}
                 {tx.paymentMode === 'UPI' && (
-                  <span className="px-2 py-0.5 rounded-lg bg-orange-100/80 text-orange-800 text-[10px] font-bold flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-lg bg-orange-100/80 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 text-[10px] font-bold flex items-center gap-1">
                     <Smartphone className="w-3 h-3" />
                     <span>UPI</span>
                   </span>
                 )}
                 {tx.paymentMode === 'Card' && (
-                  <span className="px-2 py-0.5 rounded-lg bg-blue-100/80 text-blue-800 text-[10px] font-bold flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-lg bg-blue-100/80 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 text-[10px] font-bold flex items-center gap-1">
                     <CreditCard className="w-3 h-3" />
                     <span>Card</span>
                   </span>
                 )}
                 {tx.paymentMode === 'Credit' && (
-                  <span className="px-2 py-0.5 rounded-lg bg-amber-100/80 text-amber-800 text-[10px] font-bold flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-lg bg-amber-100/80 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] font-bold flex items-center gap-1">
                     <Handshake className="w-3 h-3" />
                     <span>Khata</span>
                   </span>
                 )}
 
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-200 group-hover:translate-x-0.5 transition-all" />
               </div>
             </div>
           ))}
@@ -1070,12 +943,12 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       </div>
 
       {/* 9. REPORTS & EXPORT */}
-      <div className="mt-4 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
+      <div className="mt-4 bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-2 mb-3.5">
-          <div className="w-7 h-7 rounded-lg bg-emerald-100/80 flex items-center justify-center text-emerald-700">
+          <div className="w-7 h-7 rounded-lg bg-emerald-100/80 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
             <BarChart2 className="w-4 h-4" />
           </div>
-          <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+          <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white">
             Reports & Export
           </h3>
         </div>
@@ -1085,7 +958,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
           <button
             type="button"
             onClick={handleDownloadPDF}
-            className="py-3 px-3.5 rounded-2xl border border-red-200 bg-red-50/40 hover:bg-red-50 text-red-700 font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
+            className="py-3 px-3.5 rounded-2xl border border-red-200 dark:border-red-900/60 bg-red-50/40 dark:bg-red-950/30 hover:bg-red-50 dark:hover:bg-red-950/50 text-red-700 dark:text-red-400 font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
           >
             <span className="bg-red-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
               PDF
@@ -1097,7 +970,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
           <button
             type="button"
             onClick={handleDownloadExcel}
-            className="py-3 px-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
+            className="py-3 px-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/40 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
           >
             <span className="bg-emerald-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
               X
@@ -1109,9 +982,9 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
           <button
             type="button"
             onClick={() => setShowItemWiseModal(true)}
-            className="py-3 px-3.5 rounded-2xl border border-blue-200 bg-blue-50/40 hover:bg-blue-50 text-blue-800 font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
+            className="py-3 px-3.5 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/30 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-blue-800 dark:text-blue-400 font-bold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
           >
-            <Package className="w-4 h-4 text-blue-600" />
+            <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>Item-wise Report</span>
           </button>
         </div>
@@ -1120,17 +993,17 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       {/* MODAL: ADD NEW SALE TRANSACTION */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
                   <Plus className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800">Record New Sale Entry</h3>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">Record New Sale Entry</h3>
               </div>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 ✕
               </button>
@@ -1138,11 +1011,11 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
 
             <form onSubmit={handleAddTransaction} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Sale Amount (₹) *
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-slate-400">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-slate-400 dark:text-slate-500">
                     ₹
                   </span>
                   <input
@@ -1153,13 +1026,13 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     placeholder="0.00"
                     value={newTx.amount}
                     onChange={(e) => setNewTx({ ...newTx, amount: e.target.value })}
-                    className="grocery-input pl-8 text-lg font-black"
+                    className="grocery-input pl-8 text-lg font-black dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Payment Mode *
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -1168,10 +1041,10 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                       type="button"
                       key={mode}
                       onClick={() => setNewTx({ ...newTx, paymentMode: mode })}
-                      className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center ${
+                      className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
                         newTx.paymentMode === mode
-                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                          : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       {mode}
@@ -1181,7 +1054,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Customer Name (Optional)
                 </label>
                 <input
@@ -1189,7 +1062,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   placeholder="e.g. Walk-in Customer / Rajesh"
                   value={newTx.customerName}
                   onChange={(e) => setNewTx({ ...newTx, customerName: e.target.value })}
-                  className="grocery-input text-xs font-semibold"
+                  className="grocery-input text-xs font-semibold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                 />
               </div>
 
@@ -1197,7 +1070,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1216,29 +1089,29 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       {/* MODAL: MANUAL EDIT ALL SUMMARY VALUES */}
       {showEditAllModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
                   <Edit2 className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800">Enter Manual Dashboard Values</h3>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">Enter Manual Dashboard Values</h3>
               </div>
               <button
                 onClick={() => setShowEditAllModal(false)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               Update any number directly. Set to 0 or enter your real store figures.
             </p>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Today's Total Sales (₹)
                 </label>
                 <input
@@ -1246,13 +1119,13 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                   step="0.01"
                   value={summary.todaySales}
                   onChange={(e) => setSummary({ ...summary, todaySales: parseFloat(e.target.value) || 0 })}
-                  className="grocery-input text-sm font-bold"
+                  className="grocery-input text-sm font-bold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Total Transactions
                   </label>
                   <input
@@ -1260,11 +1133,11 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     step="1"
                     value={summary.totalTransactions}
                     onChange={(e) => setSummary({ ...summary, totalTransactions: parseInt(e.target.value) || 0 })}
-                    className="grocery-input text-sm font-bold"
+                    className="grocery-input text-sm font-bold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Estimated Daily Profit (₹)
                   </label>
                   <input
@@ -1272,14 +1145,14 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     step="0.01"
                     value={summary.estimatedProfit}
                     onChange={(e) => setSummary({ ...summary, estimatedProfit: parseFloat(e.target.value) || 0 })}
-                    className="grocery-input text-sm font-bold"
+                    className="grocery-input text-sm font-bold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Cash Sales (₹)
                   </label>
                   <input
@@ -1287,23 +1160,23 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     step="0.01"
                     value={summary.cashSales}
                     onChange={(e) => setSummary({ ...summary, cashSales: parseFloat(e.target.value) || 0 })}
-                    className="grocery-input text-xs font-bold"
+                    className="grocery-input text-xs font-bold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Digital/UPI (₹)
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    UPI (₹)
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     value={summary.digitalSales}
                     onChange={(e) => setSummary({ ...summary, digitalSales: parseFloat(e.target.value) || 0 })}
-                    className="grocery-input text-xs font-bold"
+                    className="grocery-input text-xs font-bold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Credit/Khata (₹)
                   </label>
                   <input
@@ -1311,29 +1184,29 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                     step="0.01"
                     value={summary.creditSales}
                     onChange={(e) => setSummary({ ...summary, creditSales: parseFloat(e.target.value) || 0 })}
-                    className="grocery-input text-xs font-bold"
+                    className="grocery-input text-xs font-bold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   />
                 </div>
               </div>
 
               <div className="pt-2">
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Growth % vs Yesterday
                 </label>
                 <input
                   type="number"
                   value={summary.growthPercentage}
                   onChange={(e) => setSummary({ ...summary, growthPercentage: parseFloat(e.target.value) || 0 })}
-                  className="grocery-input text-xs font-bold"
+                  className="grocery-input text-xs font-bold dark:bg-slate-800 dark:text-white dark:border-slate-700"
                 />
               </div>
             </div>
 
-            <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 mt-4">
+            <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 mt-4">
               <button
                 type="button"
                 onClick={() => setShowEditAllModal(false)}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 Close
               </button>
@@ -1352,31 +1225,31 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       {/* MODAL: ITEM-WISE REPORT */}
       {showItemWiseModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 max-h-[85vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 flex items-center justify-center text-blue-700 dark:text-blue-400">
                   <Package className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800">Item-wise Sales Breakdown</h3>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">Item-wise Sales Breakdown</h3>
               </div>
               <button
                 onClick={() => setShowItemWiseModal(false)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {groceryItems.map((item) => (
                 <div key={item.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div>
-                    <h4 className="text-xs font-bold text-slate-800">{item.name}</h4>
-                    <span className="text-[10px] text-slate-400">{item.category} • ₹{item.rate}/unit</span>
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-white">{item.name}</h4>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-400">{item.category} • ₹{item.rate}/unit</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Qty:</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Qty:</span>
                     <input
                       type="number"
                       min="0"
@@ -1387,9 +1260,9 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
                           prev.map((g) => (g.id === item.id ? { ...g, qtySold: newQty } : g))
                         );
                       }}
-                      className="w-16 px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold text-center"
+                      className="w-16 px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold text-center"
                     />
-                    <span className="text-xs font-extrabold text-slate-800 w-16 text-right">
+                    <span className="text-xs font-extrabold text-slate-800 dark:text-white w-16 text-right">
                       ₹{(item.qtySold * item.rate).toFixed(2)}
                     </span>
                   </div>
@@ -1397,9 +1270,9 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
               ))}
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-600">Total Item Sales:</span>
-              <span className="text-sm font-black text-emerald-700">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Total Item Sales:</span>
+              <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">
                 ₹{groceryItems.reduce((acc, curr) => acc + curr.qtySold * curr.rate, 0).toFixed(2)}
               </span>
             </div>
@@ -1407,7 +1280,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setShowItemWiseModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold cursor-pointer hover:bg-slate-700"
               >
                 Done
               </button>
@@ -1419,17 +1292,17 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
       {/* MODAL: VIEW ALL TRANSACTIONS */}
       {showViewAllModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 max-h-[85vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
                   <Receipt className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800">All Transactions ({transactions.length})</h3>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">All Transactions ({transactions.length})</h3>
               </div>
               <button
                 onClick={() => setShowViewAllModal(false)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 ✕
               </button>
@@ -1437,14 +1310,14 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
 
             <div className="space-y-2">
               {transactions.map((tx) => (
-                <div key={tx.id} className="p-3 bg-slate-50 rounded-2xl flex items-center justify-between text-xs">
+                <div key={tx.id} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-bold text-slate-800">{tx.invoiceNo}</span>
-                    <p className="text-[11px] text-slate-500">{tx.customerName} • {tx.time}</p>
+                    <span className="font-bold text-slate-800 dark:text-white">{tx.invoiceNo}</span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{tx.customerName} • {tx.time}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-extrabold text-sm text-slate-900">₹{tx.amount.toFixed(2)}</p>
-                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                    <p className="font-extrabold text-sm text-slate-900 dark:text-white">₹{tx.amount.toFixed(2)}</p>
+                    <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
                       {tx.paymentMode}
                     </span>
                   </div>
@@ -1455,7 +1328,7 @@ export const SalesDashboard: React.FC<SalesDashboardProps> = ({ onBackToHome, st
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setShowViewAllModal(false)}
-                className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer hover:bg-emerald-700"
               >
                 Close
               </button>

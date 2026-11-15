@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Language } from '../types';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { useSoundEffects } from '../hooks/useSoundEffects';
-import { Volume2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface LanguageSelectScreenProps {
   onContinue: () => void;
@@ -11,198 +11,123 @@ interface LanguageSelectScreenProps {
 }
 
 export const LanguageSelectScreen: React.FC<LanguageSelectScreenProps> = ({ onContinue, onBack }) => {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const { speak } = useVoiceAssistant();
   const soundFx = useSoundEffects();
-  const hasAnnouncedRef = useRef(false);
+  const [selectedLang, setSelectedLang] = useState<Language>(language || 'en');
 
-  // Spoken instructions when entering the language selection screen:
-  // Speaks "Select your preferred language" in English only once per page session / refresh
-  useEffect(() => {
-    if (!hasAnnouncedRef.current) {
-      hasAnnouncedRef.current = true;
-      const timer = setTimeout(() => {
-        speak('Select your preferred language', 'en-US');
-      }, 400);
-
-      return () => clearTimeout(timer);
-    }
-  }, [speak]);
-
-  const languagesList: {
+  const languageOptions: {
     id: Language;
+    badge: string;
     label: string;
-    flag: React.ReactNode;
-    audioText: string;
-    speechLang: string;
+    audioVoiceText: string;
+    speechLocale: string;
   }[] = [
     {
-      id: 'bn',
-      label: 'বাংলা',
-      flag: (
-        <div className="w-11 h-7 rounded-xl overflow-hidden shadow-sm border border-slate-200/80 shrink-0 relative flex items-center justify-center bg-[#006a4e]">
-          <div className="w-4 h-4 rounded-full bg-[#f42a41] -ml-1 shadow-sm" />
-        </div>
-      ),
-      audioText: 'আপনি বাংলা ভাষা নির্বাচন করেছেন',
-      speechLang: 'bn-IN',
+      id: 'en',
+      badge: 'Aa',
+      label: 'English',
+      audioVoiceText: 'You selected English language.',
+      speechLocale: 'en-US',
     },
     {
-      id: 'en',
-      label: 'English',
-      flag: (
-        <div className="w-11 h-7 rounded-xl overflow-hidden shadow-sm border border-slate-200/80 shrink-0 relative flex flex-col justify-between bg-white">
-          <div className="h-[2.5px] bg-[#b22234]" />
-          <div className="h-[2.5px] bg-[#b22234]" />
-          <div className="h-[2.5px] bg-[#b22234]" />
-          <div className="h-[2.5px] bg-[#b22234]" />
-          <div className="h-[2.5px] bg-[#b22234]" />
-          <div className="absolute top-0 left-0 w-5 h-4 bg-[#3c3b6e] flex items-center justify-center text-[8px] text-white leading-none font-bold">
-            ★
-          </div>
-        </div>
-      ),
-      audioText: 'You selected English language.',
-      speechLang: 'en-US',
+      id: 'bn',
+      badge: 'অ',
+      label: 'বাংলা',
+      audioVoiceText: 'আপনি বাংলা ভাষা নির্বাচন করেছেন।',
+      speechLocale: 'bn-IN',
     },
     {
       id: 'hi',
+      badge: 'अ',
       label: 'हिन्दी',
-      flag: (
-        <div className="w-11 h-7 rounded-xl overflow-hidden shadow-sm border border-slate-200/80 shrink-0 relative flex flex-col justify-between bg-white">
-          <div className="h-[7.5px] bg-[#ff9933]" />
-          <div className="h-[8px] bg-white flex items-center justify-center relative">
-            <div className="w-3 h-3 rounded-full border border-[#000080] flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#000080]" />
-            </div>
-          </div>
-          <div className="h-[7.5px] bg-[#138808]" />
-        </div>
-      ),
-      audioText: 'आपने हिंदी भाषा चुनी है',
-      speechLang: 'hi-IN',
+      audioVoiceText: 'आपने हिंदी भाषा चुनी है।',
+      speechLocale: 'hi-IN',
     },
   ];
 
-  const handleSelectLanguage = (lang: typeof languagesList[0]) => {
+  // Immediately speaks without any delay when clicked
+  const handleSelectLanguage = (item: typeof languageOptions[0]) => {
     soundFx.playClick();
-    setLanguage(lang.id);
-    speak(lang.audioText, lang.speechLang);
+    setSelectedLang(item.id);
+    setLanguage(item.id);
+
+    // Instant speech output in the chosen language (including Bengali)
+    speak(item.audioVoiceText, item.speechLocale);
   };
 
-  const handleSpeakPronounce = (e: React.MouseEvent, lang: typeof languagesList[0]) => {
-    e.stopPropagation();
-    soundFx.playClick();
-    speak(lang.audioText, lang.speechLang);
-  };
-
-  const handleNext = () => {
+  const handleContinue = () => {
     soundFx.playClick();
     onContinue();
   };
 
   return (
-    <div className="w-full flex-1 flex flex-col justify-between bg-[#fbfcf9] text-slate-800 animate-fade-in relative">
-      {/* Screen Title & Subtitle matching Image 1 */}
-      <div className="text-center px-4 sm:px-6 pt-6 sm:pt-10 lg:pt-12 pb-4 sm:pb-6 max-w-xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#183626] tracking-tight">
-          {t('selectLanguageTitle')}
-        </h1>
-        <p className="text-sm sm:text-base text-[#5e7768] font-medium mt-1.5 sm:mt-2">
-          {t('selectLanguageSubtitle')}
-        </p>
-      </div>
+    <div className="w-full min-h-screen bg-[#f3f9f5] flex flex-col justify-between items-center px-4 sm:px-8 py-8 sm:py-12 relative animate-fadeIn">
+      
+      {/* 
+        Requirement 2: Top-right corner circled area and image inside it are completely removed.
+        Requirement 8: Full-screen responsive layout - occupies entire laptop and mobile screen.
+      */}
 
-      {/* Language Option Cards */}
-      <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-4 sm:px-6 space-y-3.5 sm:space-y-4 z-10">
-        {languagesList.map((item) => {
-          const isSelected = language === item.id;
-          return (
-            <div
-              key={item.id}
-              onClick={() => handleSelectLanguage(item)}
-              role="button"
-              tabIndex={0}
-              className={`p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-all duration-200 flex items-center justify-between border ${
-                isSelected
-                  ? 'bg-white border-emerald-400 shadow-md shadow-emerald-950/5 ring-2 ring-emerald-500/20'
-                  : 'bg-white/95 hover:bg-white border-[#e2ede5] hover:border-emerald-300 shadow-xs'
-              }`}
-            >
-              {/* Flag + Language Label */}
-              <div className="flex items-center gap-3.5">
-                {item.flag}
-                <span className="text-base sm:text-[17px] font-bold text-[#1b3a2b] tracking-wide">
+      {/* Main Container - Full-width responsive with comfortable maximum bounds for large displays */}
+      <div className="w-full max-w-xl sm:max-w-2xl my-auto flex flex-col justify-center items-center">
+        
+        {/* Header Section */}
+        <div className="text-center pb-8 sm:pb-10">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#0f4728] tracking-tight">
+            Choose Language
+          </h2>
+          <p className="text-sm sm:text-base lg:text-lg text-slate-500 font-medium mt-2">
+            Select your preferred language
+          </p>
+        </div>
+
+        {/* Language Options List */}
+        <div className="w-full space-y-4 sm:space-y-5">
+          {languageOptions.map((item) => {
+            const isSelected = selectedLang === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectLanguage(item)}
+                className={`w-full py-4 sm:py-5 px-5 sm:px-6 rounded-2xl flex items-center transition-all duration-150 cursor-pointer ${
+                  isSelected
+                    ? 'border-2 border-[#008744] bg-[#eaf7ee] shadow-sm'
+                    : 'border border-slate-200 hover:border-slate-300 bg-white shadow-xs'
+                }`}
+              >
+                {/* Left Badge: Light mint pill with script letter */}
+                <div className="w-14 h-11 sm:w-16 sm:h-12 rounded-2xl bg-[#dcf2e5] flex items-center justify-center font-bold text-base sm:text-lg text-[#115e34] shrink-0">
+                  {item.badge}
+                </div>
+
+                {/* Divider Line */}
+                <div className="h-7 w-px bg-slate-200 mx-5 sm:mx-6" />
+
+                {/* Language Name */}
+                <span className="text-lg sm:text-xl font-black text-slate-900">
                   {item.label}
                 </span>
-              </div>
-
-              {/* Right Side: Speaker + Radio Button */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={(e) => handleSpeakPronounce(e, item)}
-                  className="p-1.5 rounded-lg text-[#5e7768] hover:text-[#235338] hover:bg-emerald-50 transition-colors"
-                  title="Listen pronunciation"
-                >
-                  <Volume2 className="w-5 h-5" />
-                </button>
-
-                {/* Radio Circle Indicator */}
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                    isSelected
-                      ? 'border-2 border-[#235338] bg-white'
-                      : 'border-2 border-slate-300'
-                  }`}
-                >
-                  {isSelected && (
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#235338] animate-scale-in" />
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Bottom Organic Wave Graphic & Supermarket Paper Bag Photo */}
-      <div className="relative mt-6 sm:mt-8 flex flex-col justify-end overflow-hidden w-full">
-        {/* Soft Mint Wave Background */}
-        <div className="w-full relative">
-          <svg
-            viewBox="0 0 1200 60"
-            className="w-full h-10 sm:h-14 lg:h-16 text-[#e8f5ec] fill-current"
-            preserveAspectRatio="none"
-          >
-            <path d="M0,35 C360,65 840,0 1200,30 L1200,60 L0,60 Z" />
-          </svg>
-          <div className="bg-[#e8f5ec] w-full pb-6 sm:pb-8 pt-0">
-            <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-4 sm:px-6">
-              {/* Supermarket Paper Bag Image */}
-              <div className="w-full h-44 sm:h-52 md:h-56 lg:h-64 rounded-2xl overflow-hidden shadow-sm border border-emerald-200/60 relative mb-4 bg-white/40">
-                <img
-                  src="/assets/grocery_bag.jpg"
-                  alt="Grocery items in shopping bag"
-                  className="w-full h-full object-cover object-bottom"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
-              </div>
-
-              {/* Continue Button matching mockup */}
-              <button
-                type="button"
-                onClick={handleNext}
-                className="w-full py-3.5 sm:py-4 px-6 rounded-2xl bg-[#235338] hover:bg-[#1a442c] active:scale-[0.99] text-white font-bold text-base shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
-              >
-                <span>{t('btnContinue')}</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform stroke-[2.5]" />
               </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
+
+        {/* Continue Button */}
+        <div className="w-full pt-8 sm:pt-10">
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="w-full py-4 sm:py-5 rounded-2xl bg-[#008744] hover:bg-[#07743d] active:scale-98 text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-emerald-700/25 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+          >
+            <span>Continue</span>
+            <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
+          </button>
+        </div>
+
       </div>
+
     </div>
   );
 };
-

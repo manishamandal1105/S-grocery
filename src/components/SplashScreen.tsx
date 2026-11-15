@@ -1,123 +1,150 @@
 import React, { useEffect, useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { useSoundEffects } from '../hooks/useSoundEffects';
-import { ShoppingBag, Sparkles, ArrowRight, Volume2 } from 'lucide-react';
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
-  const { t, language } = useLanguage();
-  const { speak } = useVoiceAssistant();
   const soundFx = useSoundEffects();
-  const [countdown, setCountdown] = useState(3);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Play splash chime
     soundFx.playSplashChime();
 
-    // Speak audio greeting based on language
-    const speechTimer = setTimeout(() => {
-      speak(t('splashGreeting'));
-    }, 400);
+    // 5-second countdown with smooth 50ms progress update
+    const startTime = Date.now();
+    const duration = 5000;
 
     const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onComplete();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, Math.round((elapsed / duration) * 100));
+      setProgress(pct);
 
-    return () => {
-      clearTimeout(speechTimer);
-      clearInterval(interval);
-    };
-  }, [language, onComplete, speak, soundFx, t]);
+      if (elapsed >= duration) {
+        clearInterval(interval);
+        onComplete();
+      }
+    }, 50);
 
-  const handleManualNext = () => {
-    soundFx.playClick();
-    onComplete();
-  };
-
-  const handleReplayAudio = () => {
-    speak(t('splashGreeting'));
-  };
+    return () => clearInterval(interval);
+  }, [onComplete, soundFx]);
 
   return (
-    <div className="min-h-[85vh] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden animate-fade-in">
-      {/* Background Ambient Aura */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[460px] h-[340px] sm:h-[460px] bg-gradient-to-tr from-emerald-500/20 via-teal-500/15 to-amber-500/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
-
-      {/* Main Logo Container */}
-      <div className="relative mb-8 group">
-        <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-emerald-400 flex items-center justify-center text-white shadow-2xl shadow-emerald-500/30 transform group-hover:scale-105 transition-all duration-500 border border-white/20">
-          <ShoppingBag className="w-14 h-14 sm:w-18 sm:h-18 text-white drop-shadow-md animate-float" />
-        </div>
-
-        {/* Floating Sparkle Badges */}
-        <div className="absolute -top-2 -right-2 w-9 h-9 rounded-2xl bg-amber-400 text-slate-900 flex items-center justify-center shadow-lg shadow-amber-400/30 animate-bounce">
-          <Sparkles className="w-5 h-5 text-amber-900" />
-        </div>
-      </div>
-
-      {/* Brand & Greetings */}
-      <div className="max-w-md space-y-3 relative z-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold backdrop-blur-md mb-1">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>{t('appName')} • {t('appTagline')}</span>
-        </div>
-
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white drop-shadow-sm">
-          "{t('splashGreeting')}"
+    <div className="w-full min-h-screen bg-white flex flex-col justify-between items-center px-4 sm:px-8 py-8 sm:py-12 animate-fadeIn relative">
+      
+      {/* 1. Top Section: Replaced outline with exact requested text: "Grocer: It's My Place" */}
+      <div className="w-full text-center pt-2 sm:pt-6">
+        <h1 className="text-2xl sm:text-4xl font-black text-[#008744] tracking-tight">
+          Grocer: It's My Place
         </h1>
-
-        <p className="text-sm sm:text-base text-slate-300 font-medium">
-          {t('splashSubtitle')}
-        </p>
-
-        {/* Voice Audio Pronunciation Badge */}
-        <div className="pt-2 flex items-center justify-center gap-2">
-          <button
-            onClick={handleReplayAudio}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-emerald-300 text-xs font-medium border border-emerald-500/20 shadow-sm transition-all"
-            title="Play Audio"
-          >
-            <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
-            <span>{t('listenAudio')}: "{t('splashGreeting')}"</span>
-          </button>
-        </div>
       </div>
 
-      {/* Progress & Skip Actions */}
-      <div className="mt-12 flex flex-col items-center gap-4 relative z-10 w-full max-w-xs">
-        {/* Animated Progress Bar */}
-        <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-slate-700/50">
+      {/* 2. Center Section: Authentic Indian Grocery Basket & Heading */}
+      <div className="w-full flex flex-col items-center justify-center my-auto py-4">
+        <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 flex items-center justify-center">
+          {/* Subtle Ambient Shadow */}
+          <div className="absolute bottom-6 w-52 sm:w-64 h-8 bg-slate-900/10 rounded-full blur-lg" />
+
+          {/* Grocery Basket Illustration */}
+          <svg
+            viewBox="0 0 360 360"
+            className="w-full h-full drop-shadow-md"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Back Groceries */}
+            {/* 1. Mustard Oil Bottle with Yellow Cap */}
+            <rect x="162" y="58" width="36" height="20" rx="4" fill="#fbbf24" stroke="#d97706" strokeWidth="2" />
+            <rect x="170" y="44" width="20" height="14" rx="3" fill="#f59e0b" />
+            <path d="M152 78 C152 74 162 70 180 70 C198 70 208 74 208 78 L218 115 L218 190 L142 190 L142 115 Z" fill="#fde68a" stroke="#d97706" strokeWidth="2" />
+            <path d="M150 115 L210 115 L210 170 L150 170 Z" fill="#fef08a" />
+            <text x="180" y="145" textAnchor="middle" fill="#b45309" fontSize="12" fontWeight="bold" fontFamily="sans-serif">OIL</text>
+
+            {/* 2. Red Flour / Atta Pack (Aashirvaad style) */}
+            <g transform="rotate(-8 120 120)">
+              <rect x="75" y="80" width="85" height="110" rx="8" fill="#dc2626" stroke="#991b1b" strokeWidth="2" />
+              <rect x="85" y="92" width="65" height="30" rx="4" fill="#ef4444" />
+              <text x="117" y="108" textAnchor="middle" fill="#fef2f2" fontSize="9" fontWeight="900" fontFamily="sans-serif">AASHIRVAAD</text>
+              <text x="117" y="118" textAnchor="middle" fill="#fef2f2" fontSize="8" fontWeight="bold" fontFamily="sans-serif">ATTA</text>
+              <circle cx="117" cy="145" r="16" fill="#fef08a" />
+              <path d="M110 145 L124 145 M117 138 L117 152" stroke="#b45309" strokeWidth="2" strokeLinecap="round" />
+            </g>
+
+            {/* 3. Blue Milk Pack (Amul Taaza style) */}
+            <g transform="rotate(8 240 120)">
+              <rect x="195" y="80" width="80" height="105" rx="8" fill="#3b82f6" stroke="#1d4ed8" strokeWidth="2" />
+              <rect x="205" y="95" width="60" height="42" rx="6" fill="#ffffff" />
+              <text x="235" y="114" textAnchor="middle" fill="#1e40af" fontSize="11" fontWeight="900" fontFamily="sans-serif">Amul</text>
+              <text x="235" y="126" textAnchor="middle" fill="#2563eb" fontSize="9" fontWeight="bold" fontFamily="sans-serif">Taaza</text>
+            </g>
+
+            {/* Front Groceries Layer */}
+            {/* 4. Yellow Maggi Noodles Pack */}
+            <g transform="rotate(-4 130 160)">
+              <rect x="80" y="130" width="82" height="75" rx="6" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
+              <rect x="94" y="142" width="54" height="24" rx="12" fill="#dc2626" />
+              <text x="121" y="158" textAnchor="middle" fill="#fef08a" fontSize="11" fontWeight="900" fontFamily="sans-serif">Maggi</text>
+              <text x="121" y="185" textAnchor="middle" fill="#713f12" fontSize="9" fontWeight="bold" fontFamily="sans-serif">2-Minute</text>
+            </g>
+
+            {/* 5. Tata Salt Pack */}
+            <rect x="145" y="125" width="70" height="82" rx="6" fill="#991b1b" stroke="#7f1d1d" strokeWidth="2" />
+            <circle cx="180" cy="162" r="22" fill="#0f172a" />
+            <text x="180" y="158" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="900" fontFamily="sans-serif">TATA</text>
+            <text x="180" y="172" textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="bold" fontFamily="sans-serif">Salt</text>
+
+            {/* 6. Green Fortune Pouch */}
+            <g transform="rotate(6 230 160)">
+              <rect x="195" y="130" width="80" height="75" rx="6" fill="#15803d" stroke="#14532d" strokeWidth="2" />
+              <rect x="202" y="140" width="22" height="55" rx="3" fill="#ffffff" />
+              <text x="213" y="175" textAnchor="middle" fill="#dc2626" fontSize="10" fontWeight="900" fontFamily="sans-serif" transform="rotate(-90 213 175)">fortune</text>
+              <circle cx="248" cy="165" r="16" fill="#fef08a" />
+            </g>
+
+            {/* Tan Grocery Shopping Basket */}
+            <path
+              d="M75 185 L285 185 L270 270 C268 280 260 286 250 286 L110 286 C100 286 92 280 90 270 Z"
+              fill="#df9d6b"
+              stroke="#b2713f"
+              strokeWidth="4"
+              strokeLinejoin="round"
+            />
+            <rect x="70" y="178" width="220" height="15" rx="6" fill="#ce8a57" stroke="#b2713f" strokeWidth="3" />
+
+            {/* Basket Grid Cutouts */}
+            <rect x="100" y="202" width="16" height="24" rx="4" fill="#22c55e" />
+            <rect x="126" y="202" width="16" height="24" rx="4" fill="#ef4444" />
+            <rect x="152" y="202" width="16" height="24" rx="4" fill="#eab308" />
+            <rect x="192" y="202" width="16" height="24" rx="4" fill="#10b981" />
+            <rect x="218" y="202" width="16" height="24" rx="4" fill="#f97316" />
+            <rect x="244" y="202" width="16" height="24" rx="4" fill="#facc15" />
+
+            <rect x="104" y="235" width="16" height="24" rx="4" fill="#3b82f6" />
+            <rect x="130" y="235" width="16" height="24" rx="4" fill="#f59e0b" />
+            <rect x="156" y="235" width="16" height="24" rx="4" fill="#ec4899" />
+            <rect x="188" y="235" width="16" height="24" rx="4" fill="#06b6d4" />
+            <rect x="214" y="235" width="16" height="24" rx="4" fill="#dc2626" />
+            <rect x="240" y="235" width="16" height="24" rx="4" fill="#84cc16" />
+          </svg>
+        </div>
+
+        {/* Heading matching Image 1: "Let's set up your shop" */}
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#4f5574] text-center tracking-tight mt-6">
+          Let's set up your shop
+        </h2>
+      </div>
+
+      {/* 3. Bottom Progress Bar filling over 5 seconds */}
+      <div className="w-full max-w-xs sm:max-w-sm mb-4 sm:mb-8">
+        <div className="w-full h-3 bg-[#cbe8d6] rounded-full overflow-hidden">
           <div
-            className="bg-gradient-to-r from-emerald-400 to-teal-300 h-full rounded-full transition-all duration-1000 ease-linear shadow-sm shadow-emerald-400/50"
-            style={{ width: `${((4 - countdown) / 3) * 100}%` }}
+            className="h-full bg-[#008744] rounded-full transition-all duration-75 ease-linear"
+            style={{ width: `${progress}%` }}
           />
         </div>
-
-        <div className="flex items-center justify-between w-full text-xs text-slate-400 px-1">
-          <span>{t('splashSettingUp')}</span>
-          <span className="font-bold text-emerald-400">{countdown}s</span>
-        </div>
-
-        {/* Skip Button */}
-        <button
-          onClick={handleManualNext}
-          className="w-full py-3 px-5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/20 backdrop-blur-md flex items-center justify-center gap-2 shadow-lg transition-all duration-200 group"
-        >
-          <span>{t('splashSkip')}</span>
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform text-emerald-400" />
-        </button>
       </div>
+
     </div>
   );
 };

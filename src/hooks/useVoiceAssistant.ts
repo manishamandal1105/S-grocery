@@ -14,6 +14,24 @@ export function useVoiceAssistant() {
   const [voiceAvailable, setVoiceAvailable] = useState(true);
   const recognitionRef = useRef<any>(null);
   const currentCallbackRef = useRef<((text: string) => void) | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  // Pre-load and cache speech synthesis voices immediately on mount
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        voicesRef.current = window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+
+      // Resume speech synthesis to prevent browser sleeping/stalling
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const win = window as unknown as IWindow;
@@ -73,7 +91,7 @@ export function useVoiceAssistant() {
       setTimeout(() => {
         setIsListening(false);
         if (onResultText) onResultText('Fresh Daily Mart');
-      }, 2500);
+      }, 1500);
       return;
     }
 
@@ -97,54 +115,122 @@ export function useVoiceAssistant() {
     setIsListening(false);
   }, []);
 
+  // Instantaneous Multi-lingual Speech Output (Fixes Bengali silent issue & eliminates click latency)
   const speak = useCallback((text: string, customLocale?: string, onEnd?: () => void) => {
-    if (!('speechSynthesis' in window)) {
+    if (!text) {
       if (onEnd) onEnd();
       return;
     }
 
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      const targetLocale = customLocale || speechLocale;
-      utterance.lang = targetLocale;
-      utterance.rate = 0.95;
-      utterance.pitch = 1.0;
+    // Stop previous active audio immediately
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch (e) {}
+      activeAudioRef.current = null;
+    }
 
-      // Try to find matching voice for target language
-      const voices = window.speechSynthesis.getVoices();
-      const langPrefix = targetLocale.split('-')[0].toLowerCase();
-      const matchingVoice = voices.find(
-        (v) => v.lang.toLowerCase().startsWith(langPrefix) || v.lang.toLowerCase().replace('_', '-').includes(targetLocale.toLowerCase())
-      );
-      if (matchingVoice) {
-        utterance.voice = matchingVoice;
+    const targetLocale = customLocale || speechLocale;
+    const langCode = targetLocale.split('-')[0].toLowerCase(); // 'bn', 'hi', 'en'
+
+    // Immediate playback function using Web Speech Synthesis fallback
+    const playViaSpeechSynthesis = () => {
+      if (!('speechSynthesis' in window)) {
+        if (onEnd) onEnd();
+        return;
       }
 
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        if (onEnd) onEnd();
-      };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        if (onEnd) onEnd();
-      };
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        window.speechSynthesis.cancel();
 
-      window.speechSynthesis.speak(utterance);
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = targetLocale;
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
+        
+        // Find matching voice for the target language (especially Bengali/Hindi/English)
+        let matchingVoice = voices.find((v) => {
+          const l = v.lang.toLowerCase().replace('_', '-');
+          const n = v.name.toLowerCase();
+          return l.startsWith(langCode) || n.includes(langCode === 'bn' ? 'bangla' : langCode === 'hi' ? 'hindi' : 'english');
+        });
+
+        // Fallback for Bengali to Indic/Hindi voice if Bengali not installed in Windows SAPI
+        if (!matchingVoice && langCode === 'bn') {
+          matchingVoice = voices.find((v) => v.lang.toLowerCase().startsWith('hi') || v.lang.toLowerCase().startsWith('in'));
+        }
+
+        if (matchingVoice) {
+          utterance.voice = matchingVoice;
+        }
+
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          if (onEnd) onEnd();
+        };
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          if (onEnd) onEnd();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        setIsSpeaking(false);
+        if (onEnd) onEnd();
+      }
+    };
+
+    // For Bengali ('bn') or instant low-latency speech, attempt high-fidelity Audio TTS first
+    // This solves the missing Bengali voice issue on Windows and plays instantly
+    try {
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
+      const audio = new Audio(ttsUrl);
+      activeAudioRef.current = audio;
+
+      setIsSpeaking(true);
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            audio.onended = () => {
+              setIsSpeaking(false);
+              if (onEnd) onEnd();
+            };
+          })
+          .catch((err) => {
+            // If network/CORS restricts Audio, seamlessly fallback to Web Speech Synthesis immediately
+            console.warn('Audio TTS fallback to SpeechSynthesis:', err);
+            playViaSpeechSynthesis();
+          });
+      }
     } catch (e) {
-      setIsSpeaking(false);
-      if (onEnd) onEnd();
+      playViaSpeechSynthesis();
     }
   }, [speechLocale]);
 
   const stopSpeaking = useCallback(() => {
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch (e) {}
+      activeAudioRef.current = null;
+    }
+
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
       } catch (e) {}
-      setIsSpeaking(false);
     }
+    setIsSpeaking(false);
   }, []);
 
   return {
