@@ -4,6 +4,16 @@ import { OwnerSetupData, DashboardMetrics } from '../types';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { SalesDashboard } from './SalesDashboard';
+import { TodaysSalesDetails } from './TodaysSalesDetails';
+import { TodaysPurchaseDetails } from './TodaysPurchaseDetails';
+import { TodaysProfitLossDetails } from './TodaysProfitLossDetails';
+import { TodaysExpensesDetails } from './TodaysExpensesDetails';
+import { ProductAlertsDetails, ProductAlertTab } from './ProductAlertsDetails';
+import { salesService } from '../services/salesService';
+import { purchaseService } from '../services/purchaseService';
+import { profitLossService } from '../services/profitLossService';
+import { expenseService } from '../services/expenseService';
+import { productService } from '../services/productService';
 import {
   Menu,
   Search,
@@ -16,32 +26,24 @@ import {
   Clock,
   Home,
   ShoppingBag,
-  PieChart,
+  Package,
   LayoutGrid,
   X,
+  AlertTriangle,
   RotateCcw,
   Volume2,
   VolumeX,
-  ArrowUpRight,
-  ArrowDown,
-  CheckCircle2,
-  Layers,
-  TrendingUp,
-  PackageCheck,
-  AlertCircle,
-  Check,
-  Moon,
   Sun,
+  Moon,
   Globe,
   User,
   MapPin,
   Phone,
   Lock,
-  Eye,
-  EyeOff,
-  Building,
-  Edit3,
-  Palette
+  Plus,
+  Filter,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 
 interface OwnerDashboardProps {
@@ -97,15 +99,13 @@ const StorefrontLogo: React.FC<{ className?: string }> = ({ className = "w-7 h-7
       stroke="#b91c1c"
       strokeWidth="1.8"
     />
-
     {/* Signboard Header */}
     <rect x="8" y="8" width="48" height="6" rx="2" fill="#b91c1c" />
     <rect x="12" y="10" width="40" height="2" rx="1" fill="#fecaca" opacity="0.8" />
   </svg>
 );
 
-// Default Zero Balances & Quantities:
-// Strictly initialized to 0 for Profit/Loss, Sales, Purchases, Expenses, and all inventory/stock counts
+// Initial Zero Balances matching the reference image state
 const defaultZeroMetrics: DashboardMetrics = {
   todaySales: 0,
   todayPurchases: 0,
@@ -128,26 +128,26 @@ const defaultZeroMetrics: DashboardMetrics = {
   ],
 };
 
-// Reference data for developer preview when testing backend data feeding
-const backendSampleMetrics: DashboardMetrics = {
-  todaySales: 12450,
-  todayPurchases: 6200,
-  todayExpenses: 1200,
-  todayProfitLoss: 3150,
-  salesGrowth: 18,
-  purchasesGrowth: 12,
-  expensesGrowth: 5,
-  profitLossGrowth: 28,
-  outOfStockCount: 3,
-  lowStockCount: 8,
-  expiringCount: 5,
+// Demo sample metrics to preview graph & live figures if user toggles demo mode
+const sampleDemoMetrics: DashboardMetrics = {
+  todaySales: 4850,
+  todayPurchases: 2200,
+  todayExpenses: 650,
+  todayProfitLoss: 2000,
+  salesGrowth: 15,
+  purchasesGrowth: 8,
+  expensesGrowth: 4,
+  profitLossGrowth: 22,
+  outOfStockCount: 2,
+  lowStockCount: 5,
+  expiringCount: 3,
   hourlySales: [
-    { time: '6 AM', amount: 150 },
-    { time: '9 AM', amount: 1100 },
-    { time: '12 PM', amount: 1650 },
-    { time: '3 PM', amount: 2150 },
-    { time: '6 PM', amount: 2150 },
-    { time: '9 PM', amount: 3000 },
+    { time: '6 AM', amount: 200 },
+    { time: '9 AM', amount: 950 },
+    { time: '12 PM', amount: 1800 },
+    { time: '3 PM', amount: 2900 },
+    { time: '6 PM', amount: 4100 },
+    { time: '9 PM', amount: 4850 },
   ],
 };
 
@@ -156,71 +156,226 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   onReset,
   initialMetrics,
 }) => {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const soundFx = useSoundEffects();
   const { speak } = useVoiceAssistant();
 
-  // Active Tab: 'home' | 'sales' | 'reports' | 'more'
-  const [activeTab, setActiveTab] = useState<'home' | 'sales' | 'reports' | 'more'>('home');
+  // Store name defaults to "Maa Laxmi Store" as in the reference image
+  const storeName = data.shopName || localStorage.getItem('sgrocery_store_name') || 'Maa Laxmi Store';
 
-  // Metrics State: initialized with all 0 values by default as instructed
+  // Active View / Tab: 'home' | 'sales-details' | 'purchase-details' | 'profit-loss-details' | 'expenses-details' | 'product-alerts' | 'sales'
+  const [activeTab, setActiveTab] = useState<'home' | 'sales-details' | 'purchase-details' | 'profit-loss-details' | 'expenses-details' | 'product-alerts' | 'sales'>('home');
+
+  // Preserved selected alert tab for "Needs Your Attention" ('out_of_stock' | 'low_stock' | 'expiring_soon')
+  const [activeAlertTab, setActiveAlertTab] = useState<ProductAlertTab>(() => {
+    return (localStorage.getItem('sgrocery_active_alert_tab') as ProductAlertTab) || 'out_of_stock';
+  });
+
+  // Metrics State: initialized with all 0 values by default as shown in reference image
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     ...defaultZeroMetrics,
     ...initialMetrics,
   });
 
-  // Developer Backend Preview Mode toggle (allows switching between 0-state and live sample values)
-  const [isDemoDataActive, setIsDemoDataActive] = useState<boolean>(false);
+  // Dynamic calculation of today's sales directly from actual completed sales transactions
+  useEffect(() => {
+    const syncSales = () => {
+      const todayTotal = salesService.getTodaySalesTotal(storeName);
+      setMetrics((prev) => ({
+        ...prev,
+        todaySales: todayTotal,
+      }));
+    };
+
+    syncSales();
+    window.addEventListener('sgrocery_sales_updated', syncSales);
+    return () => window.removeEventListener('sgrocery_sales_updated', syncSales);
+  }, [storeName]);
+
+  // Dynamic calculation of today's purchases directly from actual completed purchase transactions
+  useEffect(() => {
+    const syncPurchases = () => {
+      const todayPurchaseTotal = purchaseService.getTodayPurchasesTotal(storeName);
+      setMetrics((prev) => ({
+        ...prev,
+        todayPurchases: todayPurchaseTotal,
+      }));
+    };
+
+    syncPurchases();
+    window.addEventListener('sgrocery_purchases_updated', syncPurchases);
+    return () => window.removeEventListener('sgrocery_purchases_updated', syncPurchases);
+  }, [storeName]);
+
+  // Dynamic calculation of today's profit/loss from actual completed sales and purchase costs
+  useEffect(() => {
+    const syncProfitLoss = () => {
+      const todayPL = profitLossService.getTodayNetProfitLoss(storeName);
+      setMetrics((prev) => ({
+        ...prev,
+        todayProfitLoss: todayPL,
+      }));
+    };
+
+    syncProfitLoss();
+    window.addEventListener('sgrocery_sales_updated', syncProfitLoss);
+    window.addEventListener('sgrocery_purchases_updated', syncProfitLoss);
+    return () => {
+      window.removeEventListener('sgrocery_sales_updated', syncProfitLoss);
+      window.removeEventListener('sgrocery_purchases_updated', syncProfitLoss);
+    };
+  }, [storeName]);
+
+  // Dynamic calculation of today's expenses from actual entered expense records
+  useEffect(() => {
+    const syncExpenses = () => {
+      const todayExp = expenseService.getTodayExpensesTotal(storeName);
+      setMetrics((prev) => ({
+        ...prev,
+        todayExpenses: todayExp,
+      }));
+    };
+
+    syncExpenses();
+    window.addEventListener('sgrocery_expenses_updated', syncExpenses);
+    return () => window.removeEventListener('sgrocery_expenses_updated', syncExpenses);
+  }, [storeName]);
+
+  // Dynamic calculation of product stock alerts from actual inventory database
+  useEffect(() => {
+    const syncAlerts = () => {
+      const counts = productService.getAlertCounts(storeName);
+      setMetrics((prev) => ({
+        ...prev,
+        outOfStockCount: counts.outOfStock,
+        lowStockCount: counts.lowStock,
+        expiringCount: counts.expiringSoon,
+      }));
+    };
+
+    syncAlerts();
+    window.addEventListener('sgrocery_products_updated', syncAlerts);
+    window.addEventListener('sgrocery_sales_updated', syncAlerts);
+    window.addEventListener('sgrocery_purchases_updated', syncAlerts);
+    return () => {
+      window.removeEventListener('sgrocery_products_updated', syncAlerts);
+      window.removeEventListener('sgrocery_sales_updated', syncAlerts);
+      window.removeEventListener('sgrocery_purchases_updated', syncAlerts);
+    };
+  }, [storeName]);
+
+  const [isDemoData, setIsDemoData] = useState(false);
 
   // Modals & Drawers
   const [showMenuDrawer, setShowMenuDrawer] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAttentionItem, setSelectedAttentionItem] = useState<'out_of_stock' | 'low_stock' | 'expiring_soon' | null>(null);
 
-  // Dynamic Current Date calculation: Uses real current calendar date
+  // Add Product form state
+  const [showAddProductForm, setShowAddProductForm] = useState(false);
+  const [newProdName, setNewProdName] = useState('');
+  const [newProdStock, setNewProdStock] = useState('');
+  const [newProdPrice, setNewProdPrice] = useState('');
+  const [newProdMinStock, setNewProdMinStock] = useState('5');
+  const [newProdExpiry, setNewProdExpiry] = useState('');
+  const [newProdCategory, setNewProdCategory] = useState('');
+  const [catalogRefresh, setCatalogRefresh] = useState(0);
+
+  const handleAddProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProdName.trim()) return;
+    productService.addProduct({
+      name: newProdName.trim(),
+      category: newProdCategory.trim() || 'General Grocery',
+      currentStock: Number(newProdStock) || 0,
+      minStockLevel: Number(newProdMinStock) || 5,
+      sellingPrice: Number(newProdPrice) || 0,
+      expiryDate: newProdExpiry,
+      storeName,
+    });
+    soundFx.playSuccess();
+    setNewProdName('');
+    setNewProdStock('');
+    setNewProdPrice('');
+    setNewProdExpiry('');
+    setNewProdCategory('');
+    setShowAddProductForm(false);
+    setCatalogRefresh((prev) => prev + 1);
+  };
+
+  // Dynamic Current Date & Time-based Greeting in IST (Asia/Kolkata timezone)
   const [currentDateFormatted, setCurrentDateFormatted] = useState<string>('');
   const [currentGreeting, setCurrentGreeting] = useState<string>('');
 
   useEffect(() => {
     const updateDateTime = () => {
       const now = new Date();
-      const day = now.getDate();
-      const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      const weekdayNames = [
-        'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-      ];
 
-      const month = monthNames[now.getMonth()];
-      const weekday = weekdayNames[now.getDay()];
-      const year = now.getFullYear();
+      // Extract date and time in Indian Standard Time (IST - Asia/Kolkata)
+      const istParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: 'numeric',
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+      }).formatToParts(now);
 
+      const getPart = (type: string) => istParts.find((p) => p.type === type)?.value || '';
+
+      const hour = parseInt(getPart('hour'), 10);
+      const minute = parseInt(getPart('minute'), 10);
+      const day = getPart('day');
+      const month = getPart('month');
+      const year = getPart('year');
+      const weekday = getPart('weekday');
+
+      // Formatted date in IST: e.g. "15 November 2026, Sunday"
       setCurrentDateFormatted(`${day} ${month} ${year}, ${weekday}`);
 
-      // Time-of-day greeting
-      const hour = now.getHours();
-      let greetingPrefix = 'Good Morning';
-      if (hour >= 12 && hour < 17) greetingPrefix = 'Good Afternoon';
-      else if (hour >= 17) greetingPrefix = 'Good Evening';
+      // Dynamic Time-based Greeting in IST:
+      // - Good Morning: 5:00 AM – 11:59 AM (300 <= mins < 720)
+      // - Good Noon: 12:00 PM – 1:59 PM (720 <= mins < 840)
+      // - Good Afternoon: 2:00 PM – 4:59 PM (840 <= mins < 1020)
+      // - Good Evening: 5:00 PM – 7:59 PM (1020 <= mins < 1200)
+      // - Good Night: 8:00 PM – 4:59 AM (mins >= 1200 or mins < 300)
+      const totalMinutes = hour * 60 + minute;
+      let greetingPrefix = 'Good Night';
 
-      const ownerFirstName = data.ownerName ? data.ownerName.trim().split(' ')[0] : 'Rina';
+      if (totalMinutes >= 5 * 60 && totalMinutes < 12 * 60) {
+        greetingPrefix = 'Good Morning';
+      } else if (totalMinutes >= 12 * 60 && totalMinutes < 14 * 60) {
+        greetingPrefix = 'Good Noon';
+      } else if (totalMinutes >= 14 * 60 && totalMinutes < 17 * 60) {
+        greetingPrefix = 'Good Afternoon';
+      } else if (totalMinutes >= 17 * 60 && totalMinutes < 20 * 60) {
+        greetingPrefix = 'Good Evening';
+      } else {
+        greetingPrefix = 'Good Night';
+      }
+
+      const ownerFirstName = data.ownerName
+        ? data.ownerName.trim().split(' ')[0]
+        : (localStorage.getItem('sgrocery_owner_name') || 'Rina').trim().split(' ')[0];
       setCurrentGreeting(`${greetingPrefix}, ${ownerFirstName} 👋`);
     };
 
     updateDateTime();
-    const interval = setInterval(updateDateTime, 60000);
+    // Checks every 10 seconds so transitions between time periods occur seamlessly without refresh
+    const interval = setInterval(updateDateTime, 10000);
     return () => clearInterval(interval);
   }, [data.ownerName]);
 
-  // Dynamic user role from login (defaults to Owner if not set)
-  const userRole = (localStorage.getItem('sgrocery_user_role') || 'owner').toLowerCase() === 'helper' ? 'Helper' : 'Owner';
-  const storeName = data.shopName || localStorage.getItem('sgrocery_store_name') || 'My Store';
+  // Owner Initial for avatar badge (defaults to "R" as in reference image)
+  const ownerNameVal = data.ownerName || localStorage.getItem('sgrocery_owner_name') || 'Rina';
+  const ownerInitial = (ownerNameVal[0] || 'R').toUpperCase();
 
-  // Joined date: auto-initialized to first login date and saved (Requirement 8)
+  // Joined date: auto-initialized to first login date and saved
   const [joinedDate] = useState<string>(() => {
     let saved = localStorage.getItem('sgrocery_joined_date');
     if (!saved) {
@@ -231,23 +386,20 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     return saved;
   });
 
-  // Store Profile State (editable fields, Requirement 9)
+  // Store Profile State
   const [profileData, setProfileData] = useState({
-    shopOwner: data.ownerName || localStorage.getItem('sgrocery_owner_name') || 'Store Owner',
-    shopAddress: localStorage.getItem('sgrocery_shop_address') || '', // empty by default
-    phone: data.phone || localStorage.getItem('sgrocery_phone') || '',
+    shopOwner: ownerNameVal,
+    shopAddress: localStorage.getItem('sgrocery_shop_address') || 'Main Market Road, Ward 4',
+    phone: data.phone || localStorage.getItem('sgrocery_phone') || '+91 98765 43210',
     password: data.password || localStorage.getItem('sgrocery_password') || 'password123',
     email: data.email || localStorage.getItem('sgrocery_email') || 'store@grocery.com',
-    businessType: data.businessType || localStorage.getItem('sgrocery_business_type') || 'small',
+    businessType: data.businessType || localStorage.getItem('sgrocery_business_type') || 'Retail Shop',
   });
 
-  const [activeDrawerSection, setActiveDrawerSection] = useState<'profile' | 'language' | 'theme' | null>('profile');
-  const [showPasswordInProfile, setShowPasswordInProfile] = useState(false);
+  const [activeDrawerSection, setActiveDrawerSection] = useState<'profile' | 'language' | 'theme'>('profile');
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
-  const [isQuickEditingOwner, setIsQuickEditingOwner] = useState(false);
-  const [isQuickEditingAddress, setIsQuickEditingAddress] = useState(false);
 
-  // Theme State: 'default' | 'dark' (Requirement 11)
+  // Theme State: 'default' | 'dark'
   const [theme, setTheme] = useState<'default' | 'dark'>(() => {
     return (localStorage.getItem('sgrocery_theme') as 'default' | 'dark') || 'default';
   });
@@ -268,7 +420,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   const handleSaveProfile = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    soundFx.playSuccessCelebration();
+    soundFx.playSuccess();
     localStorage.setItem('sgrocery_owner_name', profileData.shopOwner);
     localStorage.setItem('sgrocery_shop_address', profileData.shopAddress);
     localStorage.setItem('sgrocery_phone', profileData.phone);
@@ -280,22 +432,94 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     setTimeout(() => setProfileSaveSuccess(false), 2500);
   };
 
-  const ownerInitial = (profileData.shopOwner?.[0] || data.ownerName?.[0] || 'M').toUpperCase();
+  const toggleDemoData = () => {
+    soundFx.playClick();
+    if (isDemoData) {
+      setMetrics(defaultZeroMetrics);
+      setIsDemoData(false);
+    } else {
+      setMetrics(sampleDemoMetrics);
+      setIsDemoData(true);
+    }
+  };
 
-  // Notification count: based on total attention items (or 0 when backend data is 0)
-  const notificationCount = metrics.outOfStockCount + metrics.lowStockCount + metrics.expiringCount;
+  if (activeTab === 'sales-details') {
+    return (
+      <TodaysSalesDetails
+        storeName={storeName}
+        onBack={() => {
+          soundFx.playClick();
+          setActiveTab('home');
+        }}
+      />
+    );
+  }
+
+  if (activeTab === 'purchase-details') {
+    return (
+      <TodaysPurchaseDetails
+        storeName={storeName}
+        onBack={() => {
+          soundFx.playClick();
+          setActiveTab('home');
+        }}
+      />
+    );
+  }
+
+  if (activeTab === 'profit-loss-details') {
+    return (
+      <TodaysProfitLossDetails
+        storeName={storeName}
+        onBack={() => {
+          soundFx.playClick();
+          setActiveTab('home');
+        }}
+      />
+    );
+  }
+
+  if (activeTab === 'expenses-details') {
+    return (
+      <TodaysExpensesDetails
+        storeName={storeName}
+        onBack={() => {
+          soundFx.playClick();
+          setActiveTab('home');
+        }}
+      />
+    );
+  }
+
+  if (activeTab === 'product-alerts') {
+    return (
+      <ProductAlertsDetails
+        storeName={storeName}
+        initialTab={activeAlertTab}
+        onTabChange={(tab) => {
+          setActiveAlertTab(tab);
+          localStorage.setItem('sgrocery_active_alert_tab', tab);
+        }}
+        onBack={() => {
+          soundFx.playClick();
+          setActiveTab('home');
+        }}
+      />
+    );
+  }
 
   return (
     <div className={`w-full min-h-screen flex flex-col justify-between selection:bg-emerald-600 selection:text-white transition-colors duration-200 ${
-      theme === 'dark' ? 'dark bg-slate-900 text-slate-100' : 'bg-[#f8faf9] text-slate-800'
+      theme === 'dark' ? 'dark bg-slate-900 text-slate-100' : 'bg-[#f7f8fa] text-slate-800'
     }`}>
 
-      {/* ==================== 1. FULL-SCREEN TOP APP BAR ==================== */}
-      <header className={`w-full border-b sticky top-0 z-30 shadow-2xs transition-colors ${
-        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200/80 text-slate-800'
+      {/* ==================== 1. TOP NAVIGATION APP BAR ==================== */}
+      <header className={`w-full border-b sticky top-0 z-30 transition-colors shadow-xs ${
+        theme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-100 text-slate-900'
       }`}>
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-          {/* Left: Hamburger Menu + Storefront Graphic + Store Name + Dropdown Chevron */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+          
+          {/* Left: Hamburger Menu + Store Logo + Store Name + Dropdown Chevron */}
           <div className="flex items-center gap-3 sm:gap-4">
             <button
               type="button"
@@ -303,10 +527,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 soundFx.playClick();
                 setShowMenuDrawer(true);
               }}
-              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
+              className="p-1 -ml-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white transition-colors cursor-pointer"
               title="Menu"
+              aria-label="Open Menu Drawer"
             >
-              <Menu className="w-6 h-6 stroke-[2.2]" />
+              <Menu className="w-6 h-6 stroke-[2.4]" />
             </button>
 
             <div
@@ -316,30 +541,31 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               }}
               role="button"
               tabIndex={0}
-              className="flex items-center gap-2.5 cursor-pointer group"
+              className="flex items-center gap-2 cursor-pointer group select-none"
             >
-              <StorefrontLogo className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 group-hover:scale-105 transition-transform" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-base sm:text-lg lg:text-xl font-extrabold text-[#111827] dark:text-white tracking-tight leading-none">
+              <StorefrontLogo className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 group-hover:scale-105 transition-transform" />
+              <div className="flex items-center gap-1">
+                <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-none">
                   {storeName}
                 </span>
-                <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400 stroke-[2.5]" />
+                <ChevronDown className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2.5]" />
               </div>
             </div>
           </div>
 
-          {/* Right: Search + Notifications Bell (with Badge) + User Avatar "R" */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right: Search + Notifications Bell + Green Avatar "R" */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
             <button
               type="button"
               onClick={() => {
                 soundFx.playClick();
                 setShowSearchModal(true);
               }}
-              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
               title="Search"
+              aria-label="Search"
             >
-              <Search className="w-5 h-5 stroke-[2]" />
+              <Search className="w-5 h-5 stroke-[2.2]" />
             </button>
 
             <button
@@ -348,25 +574,26 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 soundFx.playClick();
                 setShowNotifications(true);
               }}
-              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors relative cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors relative cursor-pointer"
               title="Notifications"
+              aria-label="Notifications"
             >
-              <Bell className="w-5 h-5 stroke-[2]" />
-              {/* Notification Badge */}
-              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ff3b30] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center ring-2 ring-white shadow-xs">
-                {notificationCount}
-              </span>
+              <Bell className="w-5 h-5 stroke-[2.2]" />
+              {(metrics.outOfStockCount > 0 || isDemoData) && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+              )}
             </button>
 
-            {/* Owner Green Avatar Badge */}
+            {/* Owner Green Avatar Badge (Letter 'R') */}
             <button
               type="button"
               onClick={() => {
                 soundFx.playClick();
                 setShowMenuDrawer(true);
               }}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#008744] text-white font-extrabold text-sm sm:text-base flex items-center justify-center shadow-xs hover:scale-105 transition-transform cursor-pointer"
-              title={profileData.shopOwner || 'Owner'}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#008744] text-white font-extrabold text-sm sm:text-base flex items-center justify-center shadow-xs hover:scale-105 transition-transform cursor-pointer"
+              title={ownerNameVal}
+              aria-label="User Profile"
             >
               {ownerInitial}
             </button>
@@ -374,437 +601,468 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         </div>
       </header>
 
-      {/* ==================== 2. RESPONSIVE FULL-SCREEN MAIN BODY ==================== */}
+      {/* ==================== 2. MAIN CONTENT ==================== */}
       {activeTab === 'sales' ? (
-        <main className="w-full flex-1 max-w-7xl mx-auto px-2 sm:px-4 py-4 pb-28 animate-fadeIn">
+        <main className="w-full flex-1 px-4 sm:px-6 lg:px-8 py-4 pb-28 animate-fadeIn">
           <SalesDashboard storeName={storeName} onBackToHome={() => setActiveTab('home')} />
         </main>
       ) : (
-        <main className="w-full flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 pb-28">
+        <main className="w-full flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5 pb-28">
 
-          {/* GREETING CARD (Dynamic Time-based Greeting & Dynamic Current Date) */}
-          <section className={`w-full border rounded-2xl sm:rounded-3xl p-5 sm:p-6 transition-all shadow-xs ${
-            theme === 'dark' ? 'bg-slate-800/80 border-slate-700/80 text-white' : 'bg-[#ebf7ee] border-emerald-100/70 text-slate-800'
+          {/* GREETING CARD (Mint green gradient with decorative wavy ribbon on the right & dynamic date) */}
+          <section className={`w-full relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-all shadow-xs ${
+            theme === 'dark'
+              ? 'bg-gradient-to-r from-slate-800 via-slate-800/90 to-emerald-950/40 border border-slate-700 text-white'
+              : 'bg-gradient-to-r from-[#eef9f2] via-[#e5f7ec] to-[#d6f2e1] border border-emerald-100 text-slate-900'
           }`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight">
-                  {currentGreeting}
-                </h1>
-                <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
-                  <Calendar className="w-4 h-4 text-slate-600 dark:text-slate-400 shrink-0" />
-                  <span>{currentDateFormatted}</span>
-                </div>
+            {/* Soft Translucent Wavy Patterns on the Right (as in reference image) */}
+            <svg
+              className="absolute right-0 top-0 bottom-0 h-full w-48 sm:w-64 md:w-80 pointer-events-none opacity-45 sm:opacity-55"
+              viewBox="0 0 300 120"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <path
+                d="M 60,0 C 120,40 100,90 180,70 C 240,55 220,110 300,90 L 300,120 L 0,120 Z"
+                fill="url(#greenWaveGrad1)"
+              />
+              <path
+                d="M 120,0 C 170,30 180,80 230,60 C 270,45 280,100 300,80 L 300,0 Z"
+                fill="url(#greenWaveGrad2)"
+              />
+              <defs>
+                <linearGradient id="greenWaveGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#86efac" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#4ade80" stopOpacity="0.2" />
+                </linearGradient>
+                <linearGradient id="greenWaveGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#bbf7d0" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="#86efac" stopOpacity="0.25" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            <div className="relative z-10 flex flex-col justify-center">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                {currentGreeting}
+              </h1>
+              
+              {/* Dynamic Date: Updates every day dynamically, not hardcoded */}
+              <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-semibold">
+                <Calendar className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2] shrink-0" />
+                <span>{currentDateFormatted}</span>
               </div>
             </div>
           </section>
 
-          {/* 4 MAIN STAT CARDS (Responsive: 1-col on mobile, 2-col on tablet, 4-col across on desktop/laptop) */}
+          {/* 4 METRIC STAT CARDS (2x2 grid on mobile/tablet, 4 across on desktop) */}
           <section className="w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
 
-              {/* Card 1: Today's Sales */}
-              <div className="bg-[#edf8f1] dark:bg-slate-800 border border-[#dcf2e4] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#00c569] text-white flex items-center justify-center font-bold text-2xl shadow-xs shrink-0">
-                      ₹
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
-                        Today's Sales
-                      </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
-                        ₹{metrics.todaySales.toLocaleString()}
-                      </p>
-                    </div>
+              {/* 1. Today's Sales */}
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('sales-details');
+                }}
+                role="button"
+                tabIndex={0}
+                className="bg-[#edf9f1] dark:bg-slate-800 border border-[#def2e5] dark:border-slate-700 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#00c569] text-white flex items-center justify-center font-bold text-xl sm:text-2xl shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    ₹
                   </div>
-
-                  {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#daf5e3] dark:bg-emerald-950/60 flex items-center justify-center shrink-0">
-                    <svg viewBox="0 0 28 20" className="w-5 h-4">
-                      <path
-                        d="M2 17 L8 11 L14 14 L23 4"
-                        fill="none"
-                        stroke="#00c569"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <polyline
-                        points="17 4 23 4 23 10"
-                        fill="none"
-                        stroke="#00c569"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 truncate leading-snug">
+                      Today's Sales
+                    </p>
+                    <p className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
+                      ₹{metrics.todaySales.toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-emerald-950/5 dark:border-slate-700">
-                  <span className="font-bold text-[#00c569] dark:text-emerald-400 flex items-center">
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                    {metrics.salesGrowth}%
-                  </span>
-                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#daf5e3] dark:bg-emerald-950/60 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#00c569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                      <polyline points="16 7 22 7 22 13" />
+                    </svg>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2.5]" />
                 </div>
               </div>
 
-              {/* Card 2: Today's Purchases */}
-              <div className="bg-[#eef6fe] dark:bg-slate-800 border border-[#d8eafc] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#0084ff] text-white flex items-center justify-center shadow-xs shrink-0">
-                      <ShoppingCart className="w-6 h-6 stroke-[2.2]" />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
-                        Today's Purchases
-                      </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
-                        ₹{metrics.todayPurchases.toLocaleString()}
-                      </p>
-                    </div>
+              {/* 2. Today's Purchases */}
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('purchase-details');
+                }}
+                role="button"
+                tabIndex={0}
+                className="bg-[#eef6fe] dark:bg-slate-800 border border-[#d6eaff] dark:border-slate-700 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#0084ff] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
                   </div>
-
-                  {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#dff0ff] dark:bg-blue-950/60 flex items-center justify-center shrink-0">
-                    <svg viewBox="0 0 28 20" className="w-5 h-4">
-                      <path
-                        d="M2 17 L8 11 L14 14 L23 4"
-                        fill="none"
-                        stroke="#0084ff"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <polyline
-                        points="17 4 23 4 23 10"
-                        fill="none"
-                        stroke="#0084ff"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 truncate leading-snug">
+                      Today's Purchases
+                    </p>
+                    <p className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
+                      ₹{metrics.todayPurchases.toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-blue-950/5 dark:border-slate-700">
-                  <span className="font-bold text-[#0084ff] dark:text-blue-400 flex items-center">
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                    {metrics.purchasesGrowth}%
-                  </span>
-                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#dff0ff] dark:bg-blue-950/60 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#0084ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                      <polyline points="16 7 22 7 22 13" />
+                    </svg>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2.5]" />
                 </div>
               </div>
 
-              {/* Card 3: Today's Expenses */}
-              <div className="bg-[#fff6ec] dark:bg-slate-800 border border-[#fde8d4] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#ff8000] text-white flex items-center justify-center shadow-xs shrink-0">
-                      <Wallet className="w-6 h-6 stroke-[2.2]" />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
-                        Today's Expenses
-                      </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
-                        ₹{metrics.todayExpenses.toLocaleString()}
-                      </p>
-                    </div>
+              {/* 3. Today's Expenses */}
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('expenses-details');
+                }}
+                role="button"
+                tabIndex={0}
+                className="bg-[#fff6ec] dark:bg-slate-800 border border-[#fde4cb] dark:border-slate-700 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#ff8000] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    <Wallet className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
                   </div>
-
-                  {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#ffeed9] dark:bg-amber-950/60 flex items-center justify-center shrink-0">
-                    <svg viewBox="0 0 28 20" className="w-5 h-4">
-                      <path
-                        d="M2 13 L7 17 L13 9 L19 14 L25 5"
-                        fill="none"
-                        stroke="#ff8000"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 truncate leading-snug">
+                      Today's Expenses
+                    </p>
+                    <p className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
+                      ₹{metrics.todayExpenses.toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-amber-950/5 dark:border-slate-700">
-                  <span className="font-bold text-[#ff8000] dark:text-amber-400 flex items-center">
-                    <ArrowDown className="w-3.5 h-3.5 stroke-[2.5]" />
-                    {metrics.expensesGrowth}%
-                  </span>
-                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#ffeed9] dark:bg-amber-950/60 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#ff8000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                      <polyline points="16 7 22 7 22 13" />
+                    </svg>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2.5]" />
                 </div>
               </div>
 
-              {/* Card 4: Today's Profit/Loss (Default 0 as instructed) */}
-              <div className="bg-[#f8f2fe] dark:bg-slate-800 border border-[#ecdcff] dark:border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#8a2be2] text-white flex items-center justify-center shadow-xs shrink-0">
-                      {/* 3 Bar Chart Icon */}
-                      <div className="flex items-end gap-1 h-5">
-                        <span className="w-1.5 bg-white rounded-xs h-2.5"></span>
-                        <span className="w-1.5 bg-white rounded-xs h-5"></span>
-                        <span className="w-1.5 bg-white rounded-xs h-3.5"></span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-semibold text-[#4b5563] dark:text-slate-300 leading-snug">
-                        Today's Profit/Loss
-                      </p>
-                      <p className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white tracking-tight mt-1">
-                        ₹{metrics.todayProfitLoss.toLocaleString()}
-                      </p>
+              {/* 4. Today's Profit/Loss */}
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('profit-loss-details');
+                }}
+                role="button"
+                tabIndex={0}
+                className="bg-[#f8f2fe] dark:bg-slate-800 border border-[#edd7ff] dark:border-slate-700 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#8a2be2] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    {/* 3-bar chart icon */}
+                    <div className="flex items-end gap-1 h-5">
+                      <span className="w-1 bg-white rounded-xs h-2.5"></span>
+                      <span className="w-1 bg-white rounded-xs h-5"></span>
+                      <span className="w-1 bg-white rounded-xs h-3.5"></span>
                     </div>
                   </div>
-
-                  {/* Circular Trend Sparkline */}
-                  <div className="w-10 h-10 rounded-full bg-[#f3e8ff] dark:bg-purple-950/60 flex items-center justify-center shrink-0">
-                    <svg viewBox="0 0 28 20" className="w-5 h-4">
-                      <path
-                        d="M2 16 L8 12 L13 15 L18 8 L24 10"
-                        fill="none"
-                        stroke="#8a2be2"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 truncate leading-snug">
+                      Today's Profit/Loss
+                    </p>
+                    <p className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
+                      {metrics.todayProfitLoss < 0 ? `-₹${Math.abs(metrics.todayProfitLoss).toLocaleString()}` : `₹${metrics.todayProfitLoss.toLocaleString()}`}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-xs pt-3 mt-3 border-t border-purple-950/5 dark:border-slate-700">
-                  <span className="font-bold text-[#8a2be2] dark:text-purple-400 flex items-center">
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                    {metrics.profitLossGrowth}%
-                  </span>
-                  <span className="text-[#6b7280] dark:text-slate-400">from yesterday</span>
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#f3e8ff] dark:bg-purple-950/60 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#8a2be2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                      <polyline points="16 7 22 7 22 13" />
+                    </svg>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-700 dark:text-slate-300 stroke-[2.5]" />
                 </div>
               </div>
 
             </div>
           </section>
 
-          {/* ==================== 3. SPLIT SECTION ON DESKTOP: CHART (LEFT) & ATTENTION (RIGHT) ==================== */}
-          <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+          {/* NEEDS YOUR ATTENTION SECTION (Positioned exactly above Daily Sales Overview as in reference image) */}
+          <section className="w-full">
+            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mb-2.5">
+              Needs Your Attention
+            </h2>
 
-            {/* LEFT: DAILY SALES OVERVIEW (CHART) - Occupies 7 columns on Desktop */}
-            <div className="lg:col-span-7 bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700 p-5 sm:p-6 shadow-xs touch-pan-y">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-[#111827] dark:text-white">
-                    Daily Sales Overview
-                  </h2>
-                  <p className="text-xs text-[#6b7280] dark:text-slate-400 font-normal mt-0.5">
-                    Real-time Hourly Performance
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-xs divide-y divide-slate-100 dark:divide-slate-700/60 overflow-hidden">
+              
+              {/* Row 1: Products are out of stock */}
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveAlertTab('out_of_stock');
+                  localStorage.setItem('sgrocery_active_alert_tab', 'out_of_stock');
+                  setActiveTab('product-alerts');
+                }}
+                role="button"
+                tabIndex={0}
+                className={`p-3.5 sm:p-4 flex items-center justify-between transition-all cursor-pointer group ${
+                  activeAlertTab === 'out_of_stock'
+                    ? 'bg-red-50/70 dark:bg-red-950/25 border-l-4 border-[#ff3b30]'
+                    : 'hover:bg-slate-50/80 dark:hover:bg-slate-750'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#ff3b30] text-white flex items-center justify-center font-black shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    <X className="w-4 h-4 stroke-[3]" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Products are out of stock
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {metrics.outOfStockCount > 0 && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                      {metrics.outOfStockCount}
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400 stroke-[2] group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+
+              {/* Row 2: Products are low in stock */}
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveAlertTab('low_stock');
+                  localStorage.setItem('sgrocery_active_alert_tab', 'low_stock');
+                  setActiveTab('product-alerts');
+                }}
+                role="button"
+                tabIndex={0}
+                className={`p-3.5 sm:p-4 flex items-center justify-between transition-all cursor-pointer group ${
+                  activeAlertTab === 'low_stock'
+                    ? 'bg-amber-50/70 dark:bg-amber-950/25 border-l-4 border-[#ff9500]'
+                    : 'hover:bg-slate-50/80 dark:hover:bg-slate-750'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#ff9500]/15 text-[#ff9500] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 fill-[#ff9500] text-white stroke-[1.5]" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Products are low in stock
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {metrics.lowStockCount > 0 && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                      {metrics.lowStockCount}
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400 stroke-[2] group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+
+              {/* Row 3: Products are expiring soon */}
+              <div
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveAlertTab('expiring_soon');
+                  localStorage.setItem('sgrocery_active_alert_tab', 'expiring_soon');
+                  setActiveTab('product-alerts');
+                }}
+                role="button"
+                tabIndex={0}
+                className={`p-3.5 sm:p-4 flex items-center justify-between transition-all cursor-pointer group ${
+                  activeAlertTab === 'expiring_soon'
+                    ? 'bg-blue-50/70 dark:bg-blue-950/25 border-l-4 border-[#007aff]'
+                    : 'hover:bg-slate-50/80 dark:hover:bg-slate-750'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#007aff] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    <Clock className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Products are expiring soon
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {metrics.expiringCount > 0 && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
+                      {metrics.expiringCount}
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400 stroke-[2] group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          {/* DAILY SALES OVERVIEW CARD (Matching chart with empty state, View Report in green, labels) */}
+          <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-4 sm:p-6 shadow-xs">
+            
+            {/* Header: Title on Left, Green 'View Report >' on Right */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                Daily Sales Overview
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('sales-details');
+                }}
+                className="text-xs sm:text-sm font-bold text-[#008744] hover:text-emerald-700 flex items-center gap-0.5 cursor-pointer"
+              >
+                <span>View Report</span>
+                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </div>
+
+            {/* Total Sales Summary */}
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">
+                ₹{metrics.todaySales.toLocaleString()}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                Total Sales Today
+              </p>
+            </div>
+
+            {/* Chart Area with Horizontal Dotted Gridlines & Empty State or Spline */}
+            <div className="relative w-full h-44 sm:h-52 mt-3 pt-2">
+              
+              <svg viewBox="0 0 500 140" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="salesSplineGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#00c569" stopOpacity="0.28" />
+                    <stop offset="100%" stopColor="#00c569" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Y-Axis Labels & Dashed Gridlines */}
+                {/* ₹3K */}
+                <text x="0" y="16" fill="#94a3b8" fontSize="11" fontWeight="600">₹3K</text>
+                <line x1="36" y1="12" x2="495" y2="12" stroke="#e2e8f0" strokeDasharray="3 3" strokeWidth="1" />
+
+                {/* ₹2K */}
+                <text x="0" y="52" fill="#94a3b8" fontSize="11" fontWeight="600">₹2K</text>
+                <line x1="36" y1="48" x2="495" y2="48" stroke="#e2e8f0" strokeDasharray="3 3" strokeWidth="1" />
+
+                {/* ₹1K */}
+                <text x="0" y="88" fill="#94a3b8" fontSize="11" fontWeight="600">₹1K</text>
+                <line x1="36" y1="84" x2="495" y2="84" stroke="#e2e8f0" strokeDasharray="3 3" strokeWidth="1" />
+
+                {/* ₹0 */}
+                <text x="8" y="124" fill="#94a3b8" fontSize="11" fontWeight="600">₹0</text>
+                <line x1="36" y1="120" x2="495" y2="120" stroke="#cbd5e1" strokeDasharray="3 3" strokeWidth="1" />
+
+                {/* Vertical Dotted Guides aligning with time markers */}
+                {[55, 140, 225, 310, 395, 480].map((vx, i) => (
+                  <line
+                    key={i}
+                    x1={vx}
+                    y1="12"
+                    x2={vx}
+                    y2="120"
+                    stroke="#f1f5f9"
+                    strokeDasharray="2 2"
+                    strokeWidth="1"
+                  />
+                ))}
+
+                {/* Live Spline Line if sales > 0 (e.g. demo mode), otherwise Empty State */}
+                {metrics.todaySales > 0 ? (
+                  <>
+                    <path
+                      d="M 55 116 C 95 110, 120 95, 140 85 C 180 65, 210 60, 225 50 C 260 38, 290 32, 310 30 C 350 25, 380 20, 395 18 C 430 15, 460 14, 480 12 L 480 120 L 55 120 Z"
+                      fill="url(#salesSplineGrad)"
+                    />
+                    <path
+                      d="M 55 116 C 95 110, 120 95, 140 85 C 180 65, 210 60, 225 50 C 260 38, 290 32, 310 30 C 350 25, 380 20, 395 18 C 430 15, 460 14, 480 12"
+                      fill="none"
+                      stroke="#00c569"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </>
+                ) : null}
+              </svg>
+
+              {/* Exact Empty State centered over the grid as in reference image */}
+              {metrics.todaySales === 0 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
+                  {/* Soft Gray Bar Chart Icon */}
+                  <div className="flex items-end gap-1.5 h-6 mb-1 text-slate-400">
+                    <span className="w-1.5 bg-slate-300 dark:bg-slate-600 rounded-xs h-3"></span>
+                    <span className="w-1.5 bg-slate-400 dark:bg-slate-500 rounded-xs h-6"></span>
+                    <span className="w-1.5 bg-slate-300 dark:bg-slate-600 rounded-xs h-4"></span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">
+                    No sales data yet
                   </p>
                 </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFx.playClick();
-                    setActiveTab('reports');
-                  }}
-                  className="text-xs sm:text-sm font-semibold text-[#1877f2] dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer"
-                >
-                  <span>View Report</span>
-                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-                </button>
-              </div>
-
-              {/* Total Sales Value */}
-              <div className="mt-3 mb-4">
-                <p className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight">
-                  ₹{metrics.todaySales.toLocaleString()}
-                </p>
-                <p className="text-xs text-[#6b7280] dark:text-slate-400 font-normal mt-0.5">
-                  Total Sales Today
-                </p>
-              </div>
-
-              {/* Responsive Line Chart SVG (With touch-pan-y & pointer-events-none so scrolling smoothly continues) */}
-              <div className="w-full pt-2 touch-pan-y">
-                <svg viewBox="0 0 500 150" className="w-full h-44 sm:h-52 overflow-visible pointer-events-none touch-pan-y" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#00c569" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#00c569" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Y-Axis Guidelines & Labels */}
-                  {/* ₹3K */}
-                  <text x="0" y="16" fill="#9ca3af" fontSize="11" fontWeight="600">₹3K</text>
-                  <line x1="38" y1="12" x2="495" y2="12" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
-
-                  {/* ₹2K */}
-                  <text x="0" y="52" fill="#9ca3af" fontSize="11" fontWeight="600">₹2K</text>
-                  <line x1="38" y1="48" x2="495" y2="48" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
-
-                  {/* ₹1K */}
-                  <text x="0" y="88" fill="#9ca3af" fontSize="11" fontWeight="600">₹1K</text>
-                  <line x1="38" y1="84" x2="495" y2="84" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
-
-                  {/* ₹0 */}
-                  <text x="8" y="124" fill="#9ca3af" fontSize="11" fontWeight="600">₹0</text>
-                  <line x1="38" y1="120" x2="495" y2="120" stroke="#f1f5f9" strokeWidth="1.2" />
-
-                  {/* Chart Spline Line & Area */}
-                  {metrics.todaySales > 0 ? (
-                    <>
-                      <path
-                        d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12 L 495 120 L 50 120 Z"
-                        fill="url(#fullSalesGradient)"
-                      />
-                      <path
-                        d="M 50 120 C 95 116, 120 102, 140 94 C 170 82, 195 78, 220 72 C 240 82, 255 86, 270 78 C 290 64, 305 50, 325 50 C 355 50, 385 50, 415 50 C 445 38, 470 22, 495 12"
-                        fill="none"
-                        stroke="#00c569"
-                        strokeWidth="3.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      {[
-                        { cx: 50, cy: 120 },
-                        { cx: 140, cy: 94 },
-                        { cx: 220, cy: 72 },
-                        { cx: 270, cy: 78 },
-                        { cx: 325, cy: 50 },
-                        { cx: 415, cy: 50 },
-                        { cx: 495, cy: 12 },
-                      ].map((pt, i) => (
-                        <circle
-                          key={i}
-                          cx={pt.cx}
-                          cy={pt.cy}
-                          r="4"
-                          fill="#00c569"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                          className="transition-all hover:scale-125"
-                        />
-                      ))}
-                    </>
-                  ) : (
-                    // Default 0-balance horizontal baseline
-                    <>
-                      <line x1="50" y1="120" x2="495" y2="120" stroke="#00c569" strokeWidth="3" />
-                      {[50, 140, 228, 318, 406, 495].map((cx, i) => (
-                        <circle key={i} cx={cx} cy="120" r="3.5" fill="#00c569" stroke="#ffffff" strokeWidth="2.5" />
-                      ))}
-                    </>
-                  )}
-                </svg>
-
-                {/* X-Axis Time Markers */}
-                <div className="flex justify-between items-center text-xs text-[#6b7280] dark:text-slate-400 font-medium pt-2 pl-9 pr-1">
-                  <span>6 AM</span>
-                  <span>9 AM</span>
-                  <span>12 PM</span>
-                  <span>3 PM</span>
-                  <span>6 PM</span>
-                  <span>9 PM</span>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT: NEEDS YOUR ATTENTION - Occupies 5 columns on Desktop */}
-            <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-700 p-5 sm:p-6 shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3.5">
-                  <h2 className="text-base sm:text-lg font-bold text-[#111827] dark:text-white">
-                    Needs Your Attention
-                  </h2>
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Live Stock Status
-                  </span>
-                </div>
-
-                {/* 3 Attention Items matching the reference image */}
-                <div className="divide-y divide-slate-100 dark:divide-slate-700 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden">
-                  {/* Item 1: Out of Stock */}
-                  <div
-                    onClick={() => {
-                      soundFx.playClick();
-                      setSelectedAttentionItem('out_of_stock');
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#ff4d4f] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                        <X className="w-4 h-4 stroke-[3]" />
-                      </div>
-                      <span className="text-xs sm:text-sm font-semibold text-[#374151] dark:text-slate-200">
-                        {metrics.outOfStockCount} products are out of stock
-                      </span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-
-                  {/* Item 2: Low Stock */}
-                  <div
-                    onClick={() => {
-                      soundFx.playClick();
-                      setSelectedAttentionItem('low_stock');
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#faad14] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                        <span className="text-base font-extrabold leading-none pb-0.5">!</span>
-                      </div>
-                      <span className="text-xs sm:text-sm font-semibold text-[#374151] dark:text-slate-200">
-                        {metrics.lowStockCount} products are low in stock
-                      </span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-
-                  {/* Item 3: Expiring Soon */}
-                  <div
-                    onClick={() => {
-                      soundFx.playClick();
-                      setSelectedAttentionItem('expiring_soon');
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    className="p-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#1890ff] text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
-                        <Clock className="w-4 h-4 stroke-[2.5]" />
-                      </div>
-                      <span className="text-xs sm:text-sm font-semibold text-[#374151] dark:text-slate-200">
-                        {metrics.expiringCount} products are expiring soon
-                      </span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
+              {/* X-Axis Time Markers: 6 AM, 9 AM, 12 PM, 3 PM, 6 PM, 9 PM */}
+              <div className="flex justify-between items-center text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold pt-2 pl-9 pr-2">
+                <span>6 AM</span>
+                <span>9 AM</span>
+                <span>12 PM</span>
+                <span>3 PM</span>
+                <span>6 PM</span>
+                <span>9 PM</span>
               </div>
             </div>
           </section>
+
+          {/* Quick Demo Data / 0-Balance Toggle Pill for developer review */}
+          <div className="flex items-center justify-center pt-2">
+            <button
+              type="button"
+              onClick={toggleDemoData}
+              className="text-[11px] font-bold text-slate-500 hover:text-emerald-700 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>{isDemoData ? 'Switch to Exact Zero-Balance View' : 'Preview with Sample Transactions'}</span>
+            </button>
+          </div>
 
         </main>
       )}
 
-      {/* ==================== 4. FIXED BOTTOM NAVIGATION BAR (LAPTOP & MOBILE) ==================== */}
-      <nav className={`fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md border-t py-2.5 px-4 sm:px-8 shadow-2xl transition-colors ${
-        theme === 'dark' ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200/90 shadow-slate-900/15'
-      }`}>
-        <div className="max-w-md mx-auto grid grid-cols-2 gap-3 sm:gap-4">
-          {/* Tab 1: Home Page */}
+      {/* ==================== 3. FIXED BOTTOM NAVIGATION BAR ==================== */}
+      <nav
+        aria-label="Bottom Navigation"
+        className={`fixed bottom-0 left-0 right-0 z-40 border-t py-2 px-4 sm:px-8 shadow-lg transition-colors ${
+          theme === 'dark' ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200/90'
+        }`}
+      >
+        <div className="max-w-md sm:max-w-lg mx-auto grid grid-cols-4 items-center gap-1 sm:gap-2">
+          
+          {/* 1. Home (Active in reference image with soft green rounded pill background) */}
           <button
             type="button"
             onClick={() => {
@@ -812,19 +1070,19 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               setActiveTab('home');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+            className={`py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
               activeTab === 'home'
-                ? 'bg-[#008744] text-white shadow-lg shadow-emerald-700/30 scale-102'
-                : theme === 'dark'
-                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+                ? 'bg-[#e7f7ed] text-[#008744]'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
             }`}
           >
-            <Home className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
-            <span>Home Page</span>
+            <Home className={`w-5 h-5 ${activeTab === 'home' ? 'fill-[#008744] text-[#008744]' : 'text-slate-600 dark:text-slate-400'}`} />
+            <span className={`text-[11px] sm:text-xs font-black mt-0.5 ${activeTab === 'home' ? 'text-[#008744]' : 'text-slate-600 dark:text-slate-400'}`}>
+              Home
+            </span>
           </button>
 
-          {/* Tab 2: Sales */}
+          {/* 2. Sale */}
           <button
             type="button"
             onClick={() => {
@@ -832,526 +1090,335 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               setActiveTab('sales');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`py-2.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+            className={`py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
               activeTab === 'sales'
-                ? 'bg-[#008744] text-white shadow-lg shadow-emerald-700/30 scale-102'
-                : theme === 'dark'
-                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'
+                ? 'bg-[#e7f7ed] text-[#008744]'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
             }`}
           >
-            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
-            <span>Sales</span>
+            <ShoppingBag className={`w-5 h-5 stroke-[2] ${activeTab === 'sales' ? 'text-[#008744]' : 'text-slate-600 dark:text-slate-400'}`} />
+            <span className={`text-[11px] sm:text-xs font-semibold mt-0.5 ${activeTab === 'sales' ? 'text-[#008744] font-black' : 'text-slate-600 dark:text-slate-400'}`}>
+              Sale
+            </span>
           </button>
+
+          {/* 3. Product */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              setShowProductModal(true);
+            }}
+            className="py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer text-slate-600 hover:text-slate-900 dark:text-slate-400"
+          >
+            <Package className="w-5 h-5 stroke-[2] text-slate-600 dark:text-slate-400" />
+            <span className="text-[11px] sm:text-xs font-semibold mt-0.5 text-slate-600 dark:text-slate-400">
+              Product
+            </span>
+          </button>
+
+          {/* 4. More */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              setShowMenuDrawer(true);
+            }}
+            className="py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer text-slate-600 hover:text-slate-900 dark:text-slate-400"
+          >
+            <LayoutGrid className="w-5 h-5 stroke-[2] text-slate-600 dark:text-slate-400" />
+            <span className="text-[11px] sm:text-xs font-semibold mt-0.5 text-slate-600 dark:text-slate-400">
+              More
+            </span>
+          </button>
+
         </div>
       </nav>
 
-      {/* ==================== 5. SLIDE-OUT NAVIGATION DRAWER ==================== */}
+      {/* ==================== 4. SLIDE-OUT MENU / PROFILE DRAWER ==================== */}
       {showMenuDrawer && (
-        <div className="fixed inset-0 z-50 flex animate-fade-in">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
-            onClick={() => setShowMenuDrawer(false)}
-          />
-
-          {/* Drawer Panel */}
-          <div className={`relative w-[88%] max-w-sm h-full shadow-2xl p-5 sm:p-6 flex flex-col justify-between z-10 animate-slide-right overflow-y-auto transition-colors ${
-            theme === 'dark' ? 'bg-slate-900 text-white border-r border-slate-800' : 'bg-white text-slate-800'
-          }`}>
-            <div className="space-y-4">
-              {/* Drawer Top Header (Store Name from Login & Role from Login) */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex justify-start bg-black/50 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-sm sm:max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-slideRight">
+            
+            {/* Drawer Header */}
+            <div>
+              <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-emerald-50/50 dark:bg-slate-800">
                 <div className="flex items-center gap-3">
-                  <StorefrontLogo className="w-10 h-10 shrink-0" />
+                  <StorefrontLogo className="w-8 h-8 shrink-0" />
                   <div>
-                    <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
+                    <h3 className="font-extrabold text-base text-slate-900 dark:text-white leading-tight">
                       {storeName}
                     </h3>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-[#00c569] animate-pulse"></span>
-                      <span className="text-[11px] font-bold text-[#008744] dark:text-emerald-400 uppercase tracking-wider">
-                        {userRole}
-                      </span>
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500">• Active Store</span>
-                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      Store Management & Profile
+                    </p>
                   </div>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => setShowMenuDrawer(false)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                  className="p-1.5 rounded-full hover:bg-white dark:hover:bg-slate-700 text-slate-500 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Quick Details Card: Shop Owner, Shop Address, Joined (Requirement 8) */}
-              <div className={`p-3.5 rounded-2xl border space-y-2 text-xs transition-colors ${
-                theme === 'dark' ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-[#f8faf9] border-slate-200/80 text-slate-600'
-              }`}>
-                {/* Shop Owner (Editable) */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-[#008744] shrink-0" />
-                    <span className="font-semibold text-slate-500 dark:text-slate-400">Shop Owner:</span>
-                  </div>
-                  {isQuickEditingOwner ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={profileData.shopOwner}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, shopOwner: e.target.value }))}
-                        className="px-2 py-0.5 rounded border border-emerald-500 bg-white dark:bg-slate-700 text-xs text-slate-900 dark:text-white max-w-[120px]"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => {
-                          setIsQuickEditingOwner(false);
-                          localStorage.setItem('sgrocery_owner_name', profileData.shopOwner);
-                        }}
-                        className="p-1 rounded bg-[#008744] text-white"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-800 dark:text-white">{profileData.shopOwner}</span>
-                      <button
-                        onClick={() => setIsQuickEditingOwner(true)}
-                        className="text-slate-400 hover:text-[#008744] cursor-pointer"
-                        title="Edit Shop Owner"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Shop Address (Empty by default, editable) */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span className="font-semibold text-slate-500 dark:text-slate-400">Shop Address:</span>
-                  </div>
-                  {isQuickEditingAddress ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={profileData.shopAddress}
-                        placeholder="Enter address"
-                        onChange={(e) => setProfileData(prev => ({ ...prev, shopAddress: e.target.value }))}
-                        className="px-2 py-0.5 rounded border border-amber-500 bg-white dark:bg-slate-700 text-xs text-slate-900 dark:text-white max-w-[130px]"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => {
-                          setIsQuickEditingAddress(false);
-                          localStorage.setItem('sgrocery_shop_address', profileData.shopAddress);
-                        }}
-                        className="p-1 rounded bg-[#008744] text-white"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[140px]">
-                        {profileData.shopAddress || <span className="text-slate-400 italic">Not set (Click to enter)</span>}
-                      </span>
-                      <button
-                        onClick={() => setIsQuickEditingAddress(true)}
-                        className="text-slate-400 hover:text-amber-600 cursor-pointer"
-                        title="Edit Address"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Joined (Auto-set on first login) */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <span className="font-semibold text-slate-500 dark:text-slate-400">Joined:</span>
-                  </div>
-                  <span className="font-bold text-slate-800 dark:text-white">{joinedDate}</span>
-                </div>
+              {/* Drawer Tabs */}
+              <div className="grid grid-cols-3 border-b border-slate-100 dark:border-slate-800 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setActiveDrawerSection('profile')}
+                  className={`py-3 text-center border-b-2 cursor-pointer transition-colors ${
+                    activeDrawerSection === 'profile'
+                      ? 'border-[#008744] text-[#008744]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDrawerSection('language')}
+                  className={`py-3 text-center border-b-2 cursor-pointer transition-colors ${
+                    activeDrawerSection === 'language'
+                      ? 'border-[#008744] text-[#008744]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Language
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDrawerSection('theme')}
+                  className={`py-3 text-center border-b-2 cursor-pointer transition-colors ${
+                    activeDrawerSection === 'theme'
+                      ? 'border-[#008744] text-[#008744]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Theme
+                </button>
               </div>
 
-              {/* Menu Navigation Sections */}
-              <div className="space-y-2.5">
-                {/* 1. STORE PROFILE (Requirement 9: Separate row for each option, all editable) */}
-                <div className={`rounded-2xl border transition-all ${
-                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
-                }`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFx.playClick();
-                      setActiveDrawerSection(activeDrawerSection === 'profile' ? null : 'profile');
-                    }}
-                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#008744] dark:text-emerald-400 flex items-center justify-center">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-white">Store Profile</p>
-                        <p className="text-[10px] text-slate-400">View and edit shop credentials</p>
-                      </div>
+              {/* Tab 1: Profile Editor */}
+              {activeDrawerSection === 'profile' && (
+                <div className="p-5 space-y-4">
+                  <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700">
+                    <div className="w-12 h-12 rounded-full bg-[#008744] text-white font-black text-lg flex items-center justify-center shrink-0">
+                      {ownerInitial}
                     </div>
-                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
-                      activeDrawerSection === 'profile' ? 'rotate-180 text-[#008744]' : ''
-                    }`} />
-                  </button>
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                        {profileData.shopOwner}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Joined: {joinedDate}
+                      </p>
+                    </div>
+                  </div>
 
-                  {/* Expanded Store Profile Form (Separate Row for each option) */}
-                  {activeDrawerSection === 'profile' && (
-                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 space-y-2.5 animate-fadeIn">
-                      {profileSaveSuccess && (
-                        <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Profile updated successfully!</span>
-                        </div>
-                      )}
-
-                      {/* Row 1: Shop Owner */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                          <User className="w-3 h-3 text-[#008744]" />
-                          <span>Shop Owner</span>
-                        </label>
+                  <form onSubmit={handleSaveProfile} className="space-y-3.5">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Shop Owner Name
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                         <input
                           type="text"
                           value={profileData.shopOwner}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, shopOwner: e.target.value }))}
-                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
-                          placeholder="Owner name"
+                          onChange={(e) => setProfileData({ ...profileData, shopOwner: e.target.value })}
+                          className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
                         />
                       </div>
+                    </div>
 
-                      {/* Row 2: Shop Address */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-amber-500" />
-                          <span>Shop Address</span>
-                        </label>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Store Address
+                      </label>
+                      <div className="relative">
+                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                         <input
                           type="text"
                           value={profileData.shopAddress}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, shopAddress: e.target.value }))}
-                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
-                          placeholder="e.g. 12/A Main Market, Kolkata"
+                          onChange={(e) => setProfileData({ ...profileData, shopAddress: e.target.value })}
+                          className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
                         />
                       </div>
+                    </div>
 
-                      {/* Row 3: Phone Number */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-blue-500" />
-                          <span>Phone Number</span>
-                        </label>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Phone Number
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                         <input
                           type="text"
                           value={profileData.phone}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
-                          placeholder="e.g. +91 98765 43210"
+                          onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                          className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
                         />
                       </div>
-
-                      {/* Row 4: Password */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                          <Lock className="w-3 h-3 text-rose-500" />
-                          <span>Password</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showPasswordInProfile ? 'text' : 'password'}
-                            value={profileData.password}
-                            onChange={(e) => setProfileData(prev => ({ ...prev, password: e.target.value }))}
-                            className="w-full pl-3 pr-8 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
-                            placeholder="Password"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPasswordInProfile(!showPasswordInProfile)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                          >
-                            {showPasswordInProfile ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Row 5: Email */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                          <ShoppingBag className="w-3 h-3 text-purple-500" />
-                          <span>Email</span>
-                        </label>
-                        <input
-                          type="email"
-                          value={profileData.email}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
-                          placeholder="e.g. shop@grocery.com"
-                        />
-                      </div>
-
-                      {/* Row 6: Business Type */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                          <Building className="w-3 h-3 text-teal-500" />
-                          <span>Business Type</span>
-                        </label>
-                        <select
-                          value={profileData.businessType}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, businessType: e.target.value as any }))}
-                          className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-[#008744]"
-                        >
-                          <option value="small">Small Shop (Solo / Kirana)</option>
-                          <option value="medium">Medium Shop (1-2 Staff)</option>
-                          <option value="large">Large Shop (Wholesale / Supermart)</option>
-                        </select>
-                      </div>
-
-                      {/* Save Button */}
-                      <button
-                        type="button"
-                        onClick={handleSaveProfile}
-                        className="w-full mt-2 py-2 rounded-xl bg-[#008744] hover:bg-[#06723b] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-all active:scale-98"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Save Profile Changes</span>
-                      </button>
                     </div>
-                  )}
+
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
+                    >
+                      {profileSaveSuccess ? 'Saved Successfully! ✓' : 'Save Changes'}
+                    </button>
+                  </form>
                 </div>
+              )}
 
-                {/* 2. LANGUAGE (Requirement 10: 3 options vertically one below the other) */}
-                <div className={`rounded-2xl border transition-all ${
-                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
-                }`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFx.playClick();
-                      setActiveDrawerSection(activeDrawerSection === 'language' ? null : 'language');
-                    }}
-                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                        <Globe className="w-4 h-4" />
+              {/* Tab 2: Language Selector */}
+              {activeDrawerSection === 'language' && (
+                <div className="p-5 space-y-2.5">
+                  {[
+                    { code: 'en' as const, label: 'English', native: 'English' },
+                    { code: 'hi' as const, label: 'Hindi', native: 'हिन्दी' },
+                    { code: 'bn' as const, label: 'Bengali', native: 'বাংলা' },
+                  ].map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playClick();
+                        setLanguage(lang.code);
+                      }}
+                      className={`w-full p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                        language === lang.code
+                          ? 'border-[#008744] bg-emerald-50 dark:bg-emerald-950/40 text-[#008744]'
+                          : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="text-left">
+                        <p className="font-bold text-xs">{lang.label}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{lang.native}</p>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-white">Language</p>
-                        <p className="text-[10px] text-slate-400">Change app language anytime</p>
-                      </div>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
-                      activeDrawerSection === 'language' ? 'rotate-180 text-blue-600' : ''
-                    }`} />
-                  </button>
-
-                  {/* 3 Language options vertically one below the other */}
-                  {activeDrawerSection === 'language' && (
-                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 animate-fadeIn">
-                      {[
-                        { id: 'bn', label: 'বাংলা', subtitle: 'Bengali' },
-                        { id: 'en', label: 'English', subtitle: 'English' },
-                        { id: 'hi', label: 'हिन्दी', subtitle: 'Hindi' },
-                      ].map((lang) => {
-                        const isSelected = language === lang.id;
-                        return (
-                          <button
-                            key={lang.id}
-                            type="button"
-                            onClick={() => {
-                              soundFx.playClick();
-                              setLanguage(lang.id as any);
-                            }}
-                            className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-[#008744] text-white shadow-xs'
-                                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
-                            }`}
-                          >
-                            <span className="text-sm">{lang.label}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[10px] ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
-                                {lang.subtitle}
-                              </span>
-                              {isSelected && <Check className="w-4 h-4" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                      {language === lang.code && <CheckCircle2 className="w-4 h-4 text-[#008744]" />}
+                    </button>
+                  ))}
                 </div>
+              )}
 
-                {/* 3. THEME (Requirement 11: Default and Dark Theme options) */}
-                <div className={`rounded-2xl border transition-all ${
-                  theme === 'dark' ? 'border-slate-800 bg-slate-850 bg-slate-800/50' : 'border-slate-200/80 bg-white'
-                }`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundFx.playClick();
-                      setActiveDrawerSection(activeDrawerSection === 'theme' ? null : 'theme');
-                    }}
-                    className="w-full p-3 flex items-center justify-between text-left cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                        <Palette className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-white">Theme</p>
-                        <p className="text-[10px] text-slate-400">Default or Dark theme</p>
-                      </div>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
-                      activeDrawerSection === 'theme' ? 'rotate-180 text-purple-600' : ''
-                    }`} />
-                  </button>
+              {/* Tab 3: Theme */}
+              {activeDrawerSection === 'theme' && (
+                <div className="p-5 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTheme('default')}
+                      className={`p-4 rounded-2xl border text-center cursor-pointer transition-all ${
+                        theme === 'default'
+                          ? 'border-[#008744] bg-emerald-50 text-[#008744]'
+                          : 'border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <Sun className="w-6 h-6 mx-auto mb-2 text-amber-500" />
+                      <p className="font-bold text-xs">Light Mode</p>
+                    </button>
 
-                  {/* 2 Theme Options: Default & Dark Theme */}
-                  {activeDrawerSection === 'theme' && (
-                    <div className="p-3 pt-0 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 animate-fadeIn">
-                      {/* Default Theme */}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTheme('default')}
-                        className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
-                          theme === 'default'
-                            ? 'bg-[#008744] text-white shadow-xs'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Sun className="w-4 h-4" />
-                          <div className="text-left">
-                            <p className="font-bold">Default</p>
-                            <p className={`text-[10px] ${theme === 'default' ? 'text-emerald-100' : 'text-slate-400'}`}>
-                              Original Light Emerald Theme
-                            </p>
-                          </div>
-                        </div>
-                        {theme === 'default' && <Check className="w-4 h-4" />}
-                      </button>
-
-                      {/* Dark Theme */}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTheme('dark')}
-                        className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
-                          theme === 'dark'
-                            ? 'bg-slate-800 text-emerald-400 border border-emerald-500 shadow-xs'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Moon className="w-4 h-4" />
-                          <div className="text-left">
-                            <p className="font-bold">Dark Theme</p>
-                            <p className={`text-[10px] ${theme === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>
-                              Modern Dark Palette
-                            </p>
-                          </div>
-                        </div>
-                        {theme === 'dark' && <Check className="w-4 h-4 text-emerald-400" />}
-                      </button>
-                    </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTheme('dark')}
+                      className={`p-4 rounded-2xl border text-center cursor-pointer transition-all ${
+                        theme === 'dark'
+                          ? 'border-[#008744] bg-slate-800 text-[#008744]'
+                          : 'border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <Moon className="w-6 h-6 mx-auto mb-2 text-indigo-400" />
+                      <p className="font-bold text-xs">Dark Mode</p>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Switch Store / Logout Button */}
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+            {/* Drawer Footer: Logout & Reset */}
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 space-y-2">
               <button
                 type="button"
                 onClick={() => {
-                  soundFx.playClick();
                   setShowMenuDrawer(false);
                   onReset();
                 }}
-                className="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-700 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Switch Store / Reset Setup</span>
+                <span>Logout / Switch Account</span>
               </button>
             </div>
+
           </div>
         </div>
       )}
 
-      {/* ==================== 6. NOTIFICATIONS POPOVER ==================== */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-[#ff3b30]" />
-                <h3 className="font-bold text-base text-[#111827]">
-                  Store Notifications ({notificationCount})
+      {/* ==================== 5. ATTENTION ITEM DETAIL MODAL ==================== */}
+      {selectedAttentionItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                {selectedAttentionItem === 'out_of_stock' && (
+                  <div className="w-8 h-8 rounded-full bg-[#ff3b30] text-white flex items-center justify-center font-bold">
+                    <X className="w-4 h-4 stroke-[3]" />
+                  </div>
+                )}
+                {selectedAttentionItem === 'low_stock' && (
+                  <div className="w-8 h-8 rounded-lg bg-[#ff9500]/15 text-[#ff9500] flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 fill-[#ff9500] text-white" />
+                  </div>
+                )}
+                {selectedAttentionItem === 'expiring_soon' && (
+                  <div className="w-8 h-8 rounded-full bg-[#007aff] text-white flex items-center justify-center">
+                    <Clock className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+                )}
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white capitalize">
+                  {selectedAttentionItem === 'out_of_stock' && 'Out of Stock Products'}
+                  {selectedAttentionItem === 'low_stock' && 'Low Stock Warning'}
+                  {selectedAttentionItem === 'expiring_soon' && 'Expiring Soon Items'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowNotifications(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
+                onClick={() => setSelectedAttentionItem(null)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2.5">
-              {metrics.outOfStockCount > 0 ? (
-                <div className="p-3 rounded-2xl bg-red-50 border border-red-100 text-xs text-red-900 font-medium">
-                  ⚠️ <strong>{metrics.outOfStockCount} products out of stock:</strong> Requires immediate reorder.
-                </div>
-              ) : (
-                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>No products currently out of stock.</span>
+            <div className="space-y-2 py-2">
+              {selectedAttentionItem === 'out_of_stock' && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-xs">
+                  <p className="font-bold text-red-800 dark:text-red-300">Currently 0 items in critical stock</p>
+                  <p className="text-red-600 dark:text-red-400 mt-0.5">All regular items are adequately stocked or awaiting delivery.</p>
                 </div>
               )}
-
-              {metrics.lowStockCount > 0 ? (
-                <div className="p-3 rounded-2xl bg-amber-50 border border-amber-100 text-xs text-amber-900 font-medium">
-                  ⚡ <strong>{metrics.lowStockCount} products low in stock:</strong> Check inventory levels.
-                </div>
-              ) : (
-                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Inventory levels are sufficient.</span>
+              {selectedAttentionItem === 'low_stock' && (
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 text-xs">
+                  <p className="font-bold text-amber-800 dark:text-amber-300">5 products below reorder threshold</p>
+                  <p className="text-amber-700 dark:text-amber-400 mt-0.5">Suggested reorder: Sugar (5kg left), Mustard Oil (2L left).</p>
                 </div>
               )}
-
-              {metrics.expiringCount > 0 ? (
-                <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100 text-xs text-blue-900 font-medium">
-                  🕒 <strong>{metrics.expiringCount} products expiring soon:</strong> Consider clearance discounts.
-                </div>
-              ) : (
-                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>No products expiring in the near term.</span>
+              {selectedAttentionItem === 'expiring_soon' && (
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-xs">
+                  <p className="font-bold text-blue-800 dark:text-blue-300">Fresh bread & dairy expiring in 48 hours</p>
+                  <p className="text-blue-600 dark:text-blue-400 mt-0.5">Consider applying a 10% discount on expiring milk packets.</p>
                 </div>
               )}
             </div>
 
             <button
               type="button"
-              onClick={() => setShowNotifications(false)}
-              className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-[#06723b] text-white font-bold text-xs cursor-pointer"
+              onClick={() => setSelectedAttentionItem(null)}
+              className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
             >
               Close
             </button>
@@ -1359,132 +1426,267 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         </div>
       )}
 
-      {/* ==================== 7. SEARCH MODAL ==================== */}
+      {/* ==================== 6. SEARCH MODAL ==================== */}
       {showSearchModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 bg-black/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-xs p-4 pt-16 animate-fadeIn">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl space-y-4 animate-scaleUp">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-base text-[#111827]">Search Products & Invoices</h3>
+              <h3 className="font-bold text-sm text-slate-800 dark:text-white">
+                Quick Search
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowSearchModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="text"
+                autoFocus
+                placeholder="Search products, bills, customer name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by product name, barcode, or invoice ID..."
-                className="w-full bg-[#f8faf9] border border-slate-200 rounded-2xl py-3 pl-10 pr-4 text-sm font-medium outline-none focus:border-[#008744]"
-                autoFocus
+                className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#008744]"
               />
             </div>
 
-            <div className="text-xs text-slate-500 text-center py-6">
-              {searchQuery ? `Searching for "${searchQuery}" in inventory...` : 'Type any item name or scan barcode to view inventory details.'}
+            <div className="text-center py-4 text-xs text-slate-500">
+              Type to instantly search grocery inventory or recent invoices
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== 8. ATTENTION ITEM DETAIL MODAL ==================== */}
-      {selectedAttentionItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="font-bold text-base text-[#111827]">
-                {selectedAttentionItem === 'out_of_stock' && 'Out of Stock Products'}
-                {selectedAttentionItem === 'low_stock' && 'Low Stock Inventory'}
-                {selectedAttentionItem === 'expiring_soon' && 'Expiring Soon Alert'}
+      {/* ==================== 7. PRODUCT INVENTORY MODAL ==================== */}
+      {showProductModal && (() => {
+        const catalogProducts = productService.getAllProducts(storeName);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+            <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl space-y-4 animate-scaleUp max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="w-6 h-6 text-[#008744]" />
+                  <h3 className="font-black text-base text-slate-900 dark:text-white">
+                    Product Catalog ({catalogProducts.length})
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setShowAddProductForm(false);
+                  }}
+                  className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {!showAddProductForm ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-semibold">Store Inventory</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddProductForm(true)}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Product</span>
+                    </button>
+                  </div>
+
+                  {catalogProducts.length === 0 ? (
+                    <div className="py-10 text-center flex flex-col items-center">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                        <Package className="w-7 h-7" />
+                      </div>
+                      <p className="font-extrabold text-slate-800 dark:text-white text-sm">No products in stock yet</p>
+                      <p className="text-slate-400 text-xs mt-1 max-w-xs">
+                        No products have been added to your store. Add products to populate your inventory and alerts.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddProductForm(true)}
+                        className="mt-4 px-4 py-2 rounded-xl bg-[#008744] hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+                      >
+                        + Add First Product
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {catalogProducts.map((item) => {
+                        const isOutOfStock = item.currentStock <= 0;
+                        const isLowStock = item.currentStock > 0 && item.currentStock <= item.minStockLevel;
+                        return (
+                          <div
+                            key={item.id}
+                            className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs hover:bg-slate-50/60 transition-colors"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="font-bold text-slate-900 dark:text-white truncate">{item.name}</p>
+                              <p className="text-slate-500 font-medium text-[11px]">
+                                Qty: {item.currentStock} {item.unit} • ₹{item.sellingPrice} • {item.category}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2.5 py-1 rounded-full font-bold text-[10px] shrink-0 ${
+                                isOutOfStock
+                                  ? 'bg-red-50 text-red-700'
+                                  : isLowStock
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : 'bg-emerald-50 text-emerald-700'
+                              }`}
+                            >
+                              {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowProductModal(false)}
+                    className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </>
+              ) : (
+                /* ADD PRODUCT FORM */
+                <form onSubmit={handleAddProductSubmit} className="space-y-3">
+                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Add New Product to Store
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Product Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Aashirvaad Atta (5kg)"
+                      value={newProdName}
+                      onChange={(e) => setNewProdName(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Selling Price (₹) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        required
+                        placeholder="e.g. 210"
+                        value={newProdPrice}
+                        onChange={(e) => setNewProdPrice(e.target.value)}
+                        className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Current Stock *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        placeholder="e.g. 10 (or 0)"
+                        value={newProdStock}
+                        onChange={(e) => setNewProdStock(e.target.value)}
+                        className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Min Stock Threshold</label>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 5"
+                        value={newProdMinStock}
+                        onChange={(e) => setNewProdMinStock(e.target.value)}
+                        className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Expiry Date (Optional)</label>
+                      <input
+                        type="date"
+                        value={newProdExpiry}
+                        onChange={(e) => setNewProdExpiry(e.target.value)}
+                        className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddProductForm(false)}
+                      className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 rounded-xl bg-[#008744] hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                    >
+                      Save Product
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ==================== 8. NOTIFICATIONS DRAWER ==================== */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <Bell className="w-4 h-4 text-[#008744]" />
+                Notifications
               </h3>
               <button
                 type="button"
-                onClick={() => setSelectedAttentionItem(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer"
+                onClick={() => setShowNotifications(false)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs">
-              {selectedAttentionItem === 'out_of_stock' && (
-                metrics.outOfStockCount > 0 ? (
-                  <>
-                    <div className="flex justify-between p-2.5 rounded-xl bg-red-50 text-red-900 font-semibold">
-                      <span>🌾 Miniket Rice 5kg</span>
-                      <span className="font-bold">0 units</span>
-                    </div>
-                    <div className="flex justify-between p-2.5 rounded-xl bg-red-50 text-red-900 font-semibold">
-                      <span>🛢️ Fresh Sunflower Oil 1L</span>
-                      <span className="font-bold">0 units</span>
-                    </div>
-                    <div className="flex justify-between p-2.5 rounded-xl bg-red-50 text-red-900 font-semibold">
-                      <span>🧂 Pure Crystal Sugar 1kg</span>
-                      <span className="font-bold">0 units</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-4 text-center text-slate-500">
-                    No products currently out of stock.
-                  </div>
-                )
-              )}
-
-              {selectedAttentionItem === 'low_stock' && (
-                metrics.lowStockCount > 0 ? (
-                  <>
-                    <div className="flex justify-between p-2.5 rounded-xl bg-amber-50 text-amber-900 font-semibold">
-                      <span>🍪 Parle-G Biscuit 500g</span>
-                      <span className="font-bold">2 packs left</span>
-                    </div>
-                    <div className="flex justify-between p-2.5 rounded-xl bg-amber-50 text-amber-900 font-semibold">
-                      <span>🥚 Farm Eggs (12 Pack)</span>
-                      <span className="font-bold">3 crates left</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-4 text-center text-slate-500">
-                    No low stock items. All inventory levels healthy.
-                  </div>
-                )
-              )}
-
-              {selectedAttentionItem === 'expiring_soon' && (
-                metrics.expiringCount > 0 ? (
-                  <>
-                    <div className="flex justify-between p-2.5 rounded-xl bg-blue-50 text-blue-900 font-semibold">
-                      <span>🍞 Whole Wheat Bread 400g</span>
-                      <span className="font-bold">Expires in 2 days</span>
-                    </div>
-                    <div className="flex justify-between p-2.5 rounded-xl bg-blue-50 text-blue-900 font-semibold">
-                      <span>🥣 Fresh Curd / Dahi 200g</span>
-                      <span className="font-bold">Expires in 3 days</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-4 text-center text-slate-500">
-                    No products expiring soon.
-                  </div>
-                )
-              )}
+            <div className="space-y-2 py-1 text-xs">
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 text-slate-700 dark:text-slate-200">
+                <p className="font-bold text-[#008744]">Welcome to S-Grocery!</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Your store {storeName} is ready to record transactions.</p>
+              </div>
             </div>
 
             <button
               type="button"
-              onClick={() => setSelectedAttentionItem(null)}
-              className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-[#06723b] text-white font-bold text-xs cursor-pointer"
+              onClick={() => setShowNotifications(false)}
+              className="w-full py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold text-xs hover:bg-slate-200 text-slate-700 dark:text-slate-300 cursor-pointer"
             >
-              Done
+              Dismiss
             </button>
           </div>
         </div>
       )}
+
     </div>
   );
 };

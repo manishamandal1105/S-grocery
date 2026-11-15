@@ -146,6 +146,10 @@ class SoundEngine {
       });
     } catch (e) {}
   }
+
+  public playSuccess() {
+    this.playSuccessCelebration();
+  }
 }
 
 export const soundFx = new SoundEngine();

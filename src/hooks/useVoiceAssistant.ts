@@ -80,7 +80,7 @@ export function useVoiceAssistant() {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
-        } catch (e) {}
+        } catch (e) { }
       }
     };
   }, [speechLocale]);
@@ -110,7 +110,7 @@ export function useVoiceAssistant() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
     }
     setIsListening(false);
   }, []);
@@ -127,7 +127,7 @@ export function useVoiceAssistant() {
       try {
         activeAudioRef.current.pause();
         activeAudioRef.current.currentTime = 0;
-      } catch (e) {}
+      } catch (e) { }
       activeAudioRef.current = null;
     }
 
@@ -153,7 +153,7 @@ export function useVoiceAssistant() {
         utterance.pitch = 1.0;
 
         const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
-        
+
         // Find matching voice for the target language (especially Bengali/Hindi/English)
         let matchingVoice = voices.find((v) => {
           const l = v.lang.toLowerCase().replace('_', '-');
@@ -221,14 +221,14 @@ export function useVoiceAssistant() {
       try {
         activeAudioRef.current.pause();
         activeAudioRef.current.currentTime = 0;
-      } catch (e) {}
+      } catch (e) { }
       activeAudioRef.current = null;
     }
 
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
-      } catch (e) {}
+      } catch (e) { }
     }
     setIsSpeaking(false);
   }, []);

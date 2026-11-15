@@ -339,9 +339,13 @@ export const OwnerLoginForm: React.FC<OwnerLoginFormProps> = ({
               {t('passwordLabel')} *
             </label>
             {authMode === 'login' && (
-              <a href="#forgot" className="text-[11px] font-semibold text-emerald-700 hover:underline">
+              <button
+                type="button"
+                onClick={(e) => e.preventDefault()}
+                className="text-[11px] font-semibold text-emerald-700 hover:underline cursor-pointer"
+              >
                 {t('forgotPassword')}
-              </a>
+              </button>
             )}
           </div>
           <div className="relative">

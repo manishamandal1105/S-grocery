@@ -6,6 +6,25 @@ export type BusinessTypeOption = 'Retail Shop' | 'Shop & Supply' | 'Wholesale';
 
 export type UserRole = 'owner' | 'helper';
 
+export type AuthMode = 'login' | 'register';
+
+export type ActiveTab = 'home' | 'sales';
+
+export interface SellerRegistrationData {
+  fullName: string;
+  shopName: string;
+  shopType: ShopType;
+  email: string;
+  password: string;
+}
+
+export interface HelperLoginData {
+  storeCode: string;
+  storeName?: string;
+  helperEmail: string;
+  passcode: string;
+}
+
 export type OnboardingStep =
   | 'welcome'
   | 'splash'

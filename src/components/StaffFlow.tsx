@@ -69,7 +69,7 @@ export const StaffFlow: React.FC<StaffFlowProps> = ({ onBackToRole, onReset }) =
       ownerName: language === 'bn' ? 'রহিম মিয়া' : language === 'hi' ? 'राजेश कुमार' : 'Rajesh Kumar',
       code: 'GROC-8821',
       type: 'medium',
-      address: 'Shop #12, Market Square',
+      address: 'Shop 12, Market Square',
     },
     {
       id: 'shop-2',
