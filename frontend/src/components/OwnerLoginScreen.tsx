@@ -140,6 +140,15 @@ export const OwnerLoginScreen: React.FC<OwnerLoginScreenProps> = ({ onBack, onLo
     localStorage.setItem('sgrocery_user_role', 'owner');
     localStorage.setItem('sgrocery_business_type', finalBusinessType);
     localStorage.setItem('sgrocery_user_email', email.trim());
+    localStorage.setItem('sgrocery_password', password.trim());
+    localStorage.setItem('sgrocery_password_owner', password.trim());
+
+    if (!localStorage.getItem('sgrocery_joined_date_owner')) {
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      localStorage.setItem('sgrocery_joined_date_owner', formattedDate);
+      localStorage.setItem('sgrocery_joined_date', formattedDate);
+    }
 
     onLoginSuccess({
       ownerName: finalOwnerName,

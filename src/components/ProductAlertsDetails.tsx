@@ -216,10 +216,10 @@ export const ProductAlertsDetails: React.FC<ProductAlertsDetailsProps> = ({
   }, [activeTab]);
 
   return (
-    <div className="w-full min-h-screen bg-[#f7f8fa] text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white animate-fadeIn pb-16">
+    <div className="w-full min-h-screen bg-[#f7f8fa] dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col justify-between selection:bg-emerald-600 selection:text-white animate-fadeIn pb-16">
       
       {/* ==================== 1. TOP APP BAR ==================== */}
-      <header className="w-full bg-white border-b border-slate-100 sticky top-0 z-30 shadow-xs">
+      <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           
           {/* Left: Back Arrow + Page Title ("Product Alerts" as shown in all 3 reference images) */}
@@ -233,13 +233,13 @@ export const ProductAlertsDetails: React.FC<ProductAlertsDetailsProps> = ({
                 if (onTabChange) onTabChange(activeTab);
                 onBack();
               }}
-              className="p-1 -ml-1 rounded-xl hover:bg-slate-100 text-slate-900 transition-colors cursor-pointer"
+              className="p-1 -ml-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white transition-colors cursor-pointer"
               title="Back to Home"
               aria-label="Back to Home"
             >
               <ArrowLeft className="w-6 h-6 stroke-[2.4]" />
             </button>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
               Product Alerts
             </h1>
           </div>
@@ -249,7 +249,7 @@ export const ProductAlertsDetails: React.FC<ProductAlertsDetailsProps> = ({
             <button
               type="button"
               onClick={() => soundFx.playClick()}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
               title="Search"
               aria-label="Search"
             >
@@ -259,7 +259,7 @@ export const ProductAlertsDetails: React.FC<ProductAlertsDetailsProps> = ({
             <button
               type="button"
               onClick={() => soundFx.playClick()}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
               title="Notifications"
               aria-label="Notifications"
             >
@@ -375,10 +375,10 @@ export const ProductAlertsDetails: React.FC<ProductAlertsDetailsProps> = ({
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-slate-700 leading-snug">
+              <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 leading-snug">
                 {tabConfig.title}
               </p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight mt-0.5 truncate">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
                 {productList.length}
               </p>
             </div>
@@ -393,13 +393,13 @@ export const ProductAlertsDetails: React.FC<ProductAlertsDetailsProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search product..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <X className="w-4 h-4" />
             </button>
@@ -422,30 +422,30 @@ export const ProductAlertsDetails: React.FC<ProductAlertsDetailsProps> = ({
             <div className="mb-2">
               <OpenAlertBoxGraphic type={activeTab} className="w-28 h-28 sm:w-32 sm:h-32" />
             </div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-2">
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-2">
               {tabConfig.emptyTitle}
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
               {tabConfig.emptySubtitle}
             </p>
           </div>
         ) : (
           /* POPULATED ROWS */
-          <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100 overflow-hidden shadow-2xs">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/60 overflow-hidden shadow-2xs">
             {filteredProducts.map((prod, idx) => {
               const daysLeft = getDaysUntilDate(prod.expiryDate);
               return (
                 <div
                   key={prod.id}
-                  className="px-3.5 sm:px-4 py-3 flex items-center justify-between text-xs sm:text-sm hover:bg-slate-50/80 transition-colors"
+                  className="px-3.5 sm:px-4 py-3 flex items-center justify-between text-xs sm:text-sm hover:bg-slate-50/80 dark:hover:bg-slate-750 transition-colors"
                 >
                   <div className="w-10 sm:w-12 text-center shrink-0">
-                    <span className="font-bold text-slate-400">{idx + 1}</span>
+                    <span className="font-bold text-slate-400 dark:text-slate-500">{idx + 1}</span>
                   </div>
 
                   <div className="flex-1 text-left pl-2 min-w-0 pr-3">
-                    <p className="font-bold text-slate-800 truncate">{prod.name}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">{prod.category}</p>
+                    <p className="font-bold text-slate-800 dark:text-slate-100 truncate">{prod.name}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-400 font-medium">{prod.category}</p>
                   </div>
 
                   <div className="w-36 sm:w-44 text-right shrink-0">

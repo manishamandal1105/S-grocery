@@ -129,9 +129,19 @@ export const EmployeeLoginScreen: React.FC<EmployeeLoginScreenProps> = ({ onBack
     const finalName = name.trim() || 'Staff Member';
 
     localStorage.setItem('sgrocery_is_logged_in', 'true');
-    localStorage.setItem('sgrocery_user_role', 'helper');
+    localStorage.setItem('sgrocery_user_role', 'employee');
     localStorage.setItem('sgrocery_staff_name', finalName);
     localStorage.setItem('sgrocery_user_email', email.trim());
+    localStorage.setItem('sgrocery_password', password.trim());
+    localStorage.setItem('sgrocery_password_employee', password.trim());
+    localStorage.setItem('sgrocery_employee_passcode', passcode.trim());
+
+    if (!localStorage.getItem('sgrocery_joined_date_employee')) {
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      localStorage.setItem('sgrocery_joined_date_employee', formattedDate);
+      localStorage.setItem('sgrocery_joined_date', formattedDate);
+    }
 
     onLoginSuccess({
       employeeName: finalName,
