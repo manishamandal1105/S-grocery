@@ -106,7 +106,7 @@ export const firestoreService = {
         const salesCol = collection(db, 'sales');
         const q = query(salesCol, where('storeName', '==', storeName), orderBy('createdAt', 'desc'), limit(50));
         const snap = await getDocs(q);
-        return snap.docs.map(d => ({ id: d.id, ...d.data() } as SaleRecord));
+        return snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as SaleRecord));
       }
     } catch (err) {
       console.warn("Firestore getSalesHistory fallback:", err);
