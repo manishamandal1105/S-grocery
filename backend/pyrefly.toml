@@ -1,0 +1,16 @@
+# Pyrefly Configuration for S-Grocery Backend
+search-path = [".", ".."]
+
+[errors]
+missing-import = "ignore"
+
+ignore-missing-imports = [
+    "fastapi",
+    "fastapi.*",
+    "pydantic",
+    "pydantic.*",
+    "uvicorn",
+    "uvicorn.*",
+    "firebase_admin",
+    "firebase_admin.*"
+]

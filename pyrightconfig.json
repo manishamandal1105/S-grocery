@@ -1,0 +1,6 @@
+{
+  "include": ["backend"],
+  "extraPaths": ["backend", "./backend"],
+  "reportMissingImports": "none",
+  "pythonPlatform": "All"
+}
