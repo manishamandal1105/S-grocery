@@ -160,6 +160,8 @@ export const App: React.FC = () => {
                 shopName: loginData.shopName,
                 email: loginData.email,
               }));
+              localStorage.setItem('sgrocery_user_role', 'owner');
+              localStorage.setItem('sgrocery_is_logged_in', 'true');
               setCurrentStep('owner-dashboard');
             }}
           />
@@ -170,6 +172,13 @@ export const App: React.FC = () => {
           <EmployeeLoginScreen
             onBack={() => setCurrentStep('role')}
             onLoginSuccess={(loginData) => {
+              setOwnerData((prev) => ({
+                ...prev,
+                ownerName: loginData.employeeName,
+                email: loginData.email,
+              }));
+              localStorage.setItem('sgrocery_user_role', 'employee');
+              localStorage.setItem('sgrocery_is_logged_in', 'true');
               setCurrentStep('owner-dashboard');
             }}
           />

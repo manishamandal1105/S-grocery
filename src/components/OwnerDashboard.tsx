@@ -9,6 +9,7 @@ import { TodaysPurchaseDetails } from './TodaysPurchaseDetails';
 import { TodaysProfitLossDetails } from './TodaysProfitLossDetails';
 import { TodaysExpensesDetails } from './TodaysExpensesDetails';
 import { ProductAlertsDetails, ProductAlertTab } from './ProductAlertsDetails';
+import { NavigationDrawer } from './NavigationDrawer';
 import { salesService } from '../services/salesService';
 import { purchaseService } from '../services/purchaseService';
 import { profitLossService } from '../services/profitLossService';
@@ -377,10 +378,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   // Joined date: auto-initialized to first login date and saved
   const [joinedDate] = useState<string>(() => {
-    let saved = localStorage.getItem('sgrocery_joined_date');
+    let saved = localStorage.getItem('sgrocery_joined_date_owner') || localStorage.getItem('sgrocery_joined_date');
     if (!saved) {
       const now = new Date();
       saved = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      localStorage.setItem('sgrocery_joined_date_owner', saved);
       localStorage.setItem('sgrocery_joined_date', saved);
     }
     return saved;
@@ -389,10 +391,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   // Store Profile State
   const [profileData, setProfileData] = useState({
     shopOwner: ownerNameVal,
-    shopAddress: localStorage.getItem('sgrocery_shop_address') || 'Main Market Road, Ward 4',
-    phone: data.phone || localStorage.getItem('sgrocery_phone') || '+91 98765 43210',
-    password: data.password || localStorage.getItem('sgrocery_password') || 'password123',
-    email: data.email || localStorage.getItem('sgrocery_email') || 'store@grocery.com',
+    shopAddress: localStorage.getItem('sgrocery_shop_address') || '',
+    phone: data.phone || localStorage.getItem('sgrocery_phone') || '',
+    password: data.password || localStorage.getItem('sgrocery_password') || '',
+    email: data.email || localStorage.getItem('sgrocery_email') || '',
     businessType: data.businessType || localStorage.getItem('sgrocery_business_type') || 'Retail Shop',
   });
 
@@ -409,6 +411,19 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     localStorage.setItem('sgrocery_theme', selectedTheme);
     soundFx.playClick();
   };
+
+  useEffect(() => {
+    const syncTheme = () => {
+      const currentTheme = (localStorage.getItem('sgrocery_theme') as 'default' | 'dark') || 'default';
+      setTheme(currentTheme);
+    };
+    window.addEventListener('sgrocery_theme_updated', syncTheme);
+    window.addEventListener('storage', syncTheme);
+    return () => {
+      window.removeEventListener('sgrocery_theme_updated', syncTheme);
+      window.removeEventListener('storage', syncTheme);
+    };
+  }, []);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -934,7 +949,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   soundFx.playClick();
                   setActiveTab('sales-details');
                 }}
-                className="text-xs sm:text-sm font-bold text-[#008744] hover:text-emerald-700 flex items-center gap-0.5 cursor-pointer"
+                className="text-xs sm:text-sm font-bold text-[#008744] hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center gap-0.5 cursor-pointer"
               >
                 <span>View Report</span>
                 <ChevronRight className="w-4 h-4 stroke-[2.5]" />
@@ -1043,7 +1058,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             <button
               type="button"
               onClick={toggleDemoData}
-              className="text-[11px] font-bold text-slate-500 hover:text-emerald-700 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer"
+              className="text-[11px] font-bold text-slate-500 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-300 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>{isDemoData ? 'Switch to Exact Zero-Balance View' : 'Preview with Sample Transactions'}</span>
@@ -1072,12 +1087,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             }}
             className={`py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
               activeTab === 'home'
-                ? 'bg-[#e7f7ed] text-[#008744]'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
+                ? 'bg-[#e7f7ed] text-[#008744] dark:bg-emerald-950/70 dark:text-emerald-300'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
             }`}
           >
-            <Home className={`w-5 h-5 ${activeTab === 'home' ? 'fill-[#008744] text-[#008744]' : 'text-slate-600 dark:text-slate-400'}`} />
-            <span className={`text-[11px] sm:text-xs font-black mt-0.5 ${activeTab === 'home' ? 'text-[#008744]' : 'text-slate-600 dark:text-slate-400'}`}>
+            <Home className={`w-5 h-5 ${activeTab === 'home' ? 'fill-[#008744] text-[#008744] dark:fill-emerald-400 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`} />
+            <span className={`text-[11px] sm:text-xs font-black mt-0.5 ${activeTab === 'home' ? 'text-[#008744] dark:text-emerald-300' : 'text-slate-600 dark:text-slate-300'}`}>
               Home
             </span>
           </button>
@@ -1092,12 +1107,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             }}
             className={`py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
               activeTab === 'sales'
-                ? 'bg-[#e7f7ed] text-[#008744]'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
+                ? 'bg-[#e7f7ed] text-[#008744] dark:bg-emerald-950/70 dark:text-emerald-300'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
             }`}
           >
-            <ShoppingBag className={`w-5 h-5 stroke-[2] ${activeTab === 'sales' ? 'text-[#008744]' : 'text-slate-600 dark:text-slate-400'}`} />
-            <span className={`text-[11px] sm:text-xs font-semibold mt-0.5 ${activeTab === 'sales' ? 'text-[#008744] font-black' : 'text-slate-600 dark:text-slate-400'}`}>
+            <ShoppingBag className={`w-5 h-5 stroke-[2] ${activeTab === 'sales' ? 'text-[#008744] dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`} />
+            <span className={`text-[11px] sm:text-xs font-semibold mt-0.5 ${activeTab === 'sales' ? 'text-[#008744] dark:text-emerald-300 font-black' : 'text-slate-600 dark:text-slate-300'}`}>
               Sale
             </span>
           </button>
@@ -1109,10 +1124,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               soundFx.playClick();
               setShowProductModal(true);
             }}
-            className="py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer text-slate-600 hover:text-slate-900 dark:text-slate-400"
+            className="py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
           >
-            <Package className="w-5 h-5 stroke-[2] text-slate-600 dark:text-slate-400" />
-            <span className="text-[11px] sm:text-xs font-semibold mt-0.5 text-slate-600 dark:text-slate-400">
+            <Package className="w-5 h-5 stroke-[2] text-slate-600 dark:text-slate-300" />
+            <span className="text-[11px] sm:text-xs font-semibold mt-0.5 text-slate-600 dark:text-slate-300">
               Product
             </span>
           </button>
@@ -1124,10 +1139,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               soundFx.playClick();
               setShowMenuDrawer(true);
             }}
-            className="py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer text-slate-600 hover:text-slate-900 dark:text-slate-400"
+            className="py-1.5 px-3 sm:px-4 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
           >
-            <LayoutGrid className="w-5 h-5 stroke-[2] text-slate-600 dark:text-slate-400" />
-            <span className="text-[11px] sm:text-xs font-semibold mt-0.5 text-slate-600 dark:text-slate-400">
+            <LayoutGrid className="w-5 h-5 stroke-[2] text-slate-600 dark:text-slate-300" />
+            <span className="text-[11px] sm:text-xs font-semibold mt-0.5 text-slate-600 dark:text-slate-300">
               More
             </span>
           </button>
@@ -1135,228 +1150,21 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         </div>
       </nav>
 
-      {/* ==================== 4. SLIDE-OUT MENU / PROFILE DRAWER ==================== */}
-      {showMenuDrawer && (
-        <div className="fixed inset-0 z-50 flex justify-start bg-black/50 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-sm sm:max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-slideRight">
-            
-            {/* Drawer Header */}
-            <div>
-              <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-emerald-50/50 dark:bg-slate-800">
-                <div className="flex items-center gap-3">
-                  <StorefrontLogo className="w-8 h-8 shrink-0" />
-                  <div>
-                    <h3 className="font-extrabold text-base text-slate-900 dark:text-white leading-tight">
-                      {storeName}
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      Store Management & Profile
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowMenuDrawer(false)}
-                  className="p-1.5 rounded-full hover:bg-white dark:hover:bg-slate-700 text-slate-500 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Drawer Tabs */}
-              <div className="grid grid-cols-3 border-b border-slate-100 dark:border-slate-800 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setActiveDrawerSection('profile')}
-                  className={`py-3 text-center border-b-2 cursor-pointer transition-colors ${
-                    activeDrawerSection === 'profile'
-                      ? 'border-[#008744] text-[#008744]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Profile
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveDrawerSection('language')}
-                  className={`py-3 text-center border-b-2 cursor-pointer transition-colors ${
-                    activeDrawerSection === 'language'
-                      ? 'border-[#008744] text-[#008744]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Language
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveDrawerSection('theme')}
-                  className={`py-3 text-center border-b-2 cursor-pointer transition-colors ${
-                    activeDrawerSection === 'theme'
-                      ? 'border-[#008744] text-[#008744]'
-                      : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Theme
-                </button>
-              </div>
-
-              {/* Tab 1: Profile Editor */}
-              {activeDrawerSection === 'profile' && (
-                <div className="p-5 space-y-4">
-                  <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700">
-                    <div className="w-12 h-12 rounded-full bg-[#008744] text-white font-black text-lg flex items-center justify-center shrink-0">
-                      {ownerInitial}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                        {profileData.shopOwner}
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Joined: {joinedDate}
-                      </p>
-                    </div>
-                  </div>
-
-                  <form onSubmit={handleSaveProfile} className="space-y-3.5">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        Shop Owner Name
-                      </label>
-                      <div className="relative">
-                        <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                        <input
-                          type="text"
-                          value={profileData.shopOwner}
-                          onChange={(e) => setProfileData({ ...profileData, shopOwner: e.target.value })}
-                          className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        Store Address
-                      </label>
-                      <div className="relative">
-                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                        <input
-                          type="text"
-                          value={profileData.shopAddress}
-                          onChange={(e) => setProfileData({ ...profileData, shopAddress: e.target.value })}
-                          className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        Phone Number
-                      </label>
-                      <div className="relative">
-                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                        <input
-                          type="text"
-                          value={profileData.phone}
-                          onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                          className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#008744]"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-2.5 rounded-xl bg-[#008744] hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
-                    >
-                      {profileSaveSuccess ? 'Saved Successfully! ✓' : 'Save Changes'}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* Tab 2: Language Selector */}
-              {activeDrawerSection === 'language' && (
-                <div className="p-5 space-y-2.5">
-                  {[
-                    { code: 'en' as const, label: 'English', native: 'English' },
-                    { code: 'hi' as const, label: 'Hindi', native: 'हिन्दी' },
-                    { code: 'bn' as const, label: 'Bengali', native: 'বাংলা' },
-                  ].map((lang) => (
-                    <button
-                      key={lang.code}
-                      type="button"
-                      onClick={() => {
-                        soundFx.playClick();
-                        setLanguage(lang.code);
-                      }}
-                      className={`w-full p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                        language === lang.code
-                          ? 'border-[#008744] bg-emerald-50 dark:bg-emerald-950/40 text-[#008744]'
-                          : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="text-left">
-                        <p className="font-bold text-xs">{lang.label}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{lang.native}</p>
-                      </div>
-                      {language === lang.code && <CheckCircle2 className="w-4 h-4 text-[#008744]" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Tab 3: Theme */}
-              {activeDrawerSection === 'theme' && (
-                <div className="p-5 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTheme('default')}
-                      className={`p-4 rounded-2xl border text-center cursor-pointer transition-all ${
-                        theme === 'default'
-                          ? 'border-[#008744] bg-emerald-50 text-[#008744]'
-                          : 'border-slate-200 dark:border-slate-700'
-                      }`}
-                    >
-                      <Sun className="w-6 h-6 mx-auto mb-2 text-amber-500" />
-                      <p className="font-bold text-xs">Light Mode</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTheme('dark')}
-                      className={`p-4 rounded-2xl border text-center cursor-pointer transition-all ${
-                        theme === 'dark'
-                          ? 'border-[#008744] bg-slate-800 text-[#008744]'
-                          : 'border-slate-200 dark:border-slate-700'
-                      }`}
-                    >
-                      <Moon className="w-6 h-6 mx-auto mb-2 text-indigo-400" />
-                      <p className="font-bold text-xs">Dark Mode</p>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Drawer Footer: Logout & Reset */}
-            <div className="p-5 border-t border-slate-100 dark:border-slate-800 space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMenuDrawer(false);
-                  onReset();
-                }}
-                className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Logout / Switch Account</span>
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
+      {/* ==================== 4. LEFT NAVIGATION DRAWER (Images 1-9) ==================== */}
+      <NavigationDrawer
+        isOpen={showMenuDrawer}
+        onClose={() => setShowMenuDrawer(false)}
+        onLogout={onReset}
+        currentRole={
+          (localStorage.getItem('sgrocery_user_role') === 'helper'
+            ? 'employee'
+            : (localStorage.getItem('sgrocery_user_role') as any)) || 'owner'
+        }
+        currentStoreName={storeName}
+        onStoreNameUpdate={(newName) => {
+          localStorage.setItem('sgrocery_store_name', newName);
+        }}
+      />
 
       {/* ==================== 5. ATTENTION ITEM DETAIL MODAL ==================== */}
       {selectedAttentionItem && (

@@ -62,21 +62,21 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
 
   // Record New Purchase Modal State
   const [showAddPurchaseModal, setShowAddPurchaseModal] = useState(false);
-  const [supplierName, setSupplierName] = useState('Kolkata Wholesale Traders');
-  const [paymentMode, setPaymentMode] = useState<'Cash' | 'Bank Transfer' | 'UPI' | 'Credit'>('Bank Transfer');
+  const [supplierName, setSupplierName] = useState('Metro Cash & Carry');
+  const [paymentMode, setPaymentMode] = useState<'Bank Transfer' | 'Cash' | 'UPI' | 'Credit'>('Bank Transfer');
   const [purchaseLineItems, setPurchaseLineItems] = useState<{ productName: string; quantity: number; unitPrice: number }[]>([
-    { productName: 'Fortune Mustard Oil (1L)', quantity: 5, unitPrice: 130 },
+    { productName: 'Fortune Mustard Oil (1L)', quantity: 10, unitPrice: 125 },
   ]);
 
   // Trigger re-render whenever purchases change
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    const handlePurchasesUpdated = () => {
+    const handlePurchaseUpdated = () => {
       setRefreshTrigger((prev) => prev + 1);
     };
-    window.addEventListener('sgrocery_purchases_updated', handlePurchasesUpdated);
-    return () => window.removeEventListener('sgrocery_purchases_updated', handlePurchasesUpdated);
+    window.addEventListener('sgrocery_purchases_updated', handlePurchaseUpdated);
+    return () => window.removeEventListener('sgrocery_purchases_updated', handlePurchaseUpdated);
   }, []);
 
   // Retrieve itemized products purchased for the selected date
@@ -93,7 +93,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
 
   // Total purchase amount for the selected date
   const totalPurchaseAmount = useMemo(() => {
-    return purchaseService.getDatePurchasesTotal(selectedDate, storeName);
+    return purchaseService.getDatePurchaseTotal(selectedDate, storeName);
   }, [selectedDate, storeName, refreshTrigger]);
 
   // Grand total for the displayed products
@@ -127,25 +127,10 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
     }
   };
 
-  // Select catalog item for purchase
-  const handleSelectCatalogItem = (idx: number, catalogItem: CatalogItem) => {
-    const updated = [...purchaseLineItems];
-    // Wholesale purchase price typically ~15% below retail
-    const wholesalePrice = Math.round(catalogItem.unitPrice * 0.85);
-    updated[idx] = {
-      productName: catalogItem.name,
-      quantity: updated[idx].quantity || 5,
-      unitPrice: wholesalePrice,
-    };
-    setPurchaseLineItems(updated);
-  };
-
   // Save new purchase transaction
   const handleSavePurchase = (e: React.FormEvent) => {
     e.preventDefault();
-    const validItems = purchaseLineItems.filter(
-      (item) => item.productName.trim() && item.quantity > 0 && item.unitPrice > 0
-    );
+    const validItems = purchaseLineItems.filter((item) => item.productName.trim() && item.quantity > 0 && item.unitPrice > 0);
     if (validItems.length === 0) {
       alert('Please enter at least one valid product with quantity and purchase price.');
       return;
@@ -153,23 +138,22 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
 
     soundFx.playSuccess();
     purchaseService.recordCompletedPurchase({
-      supplierName: supplierName || 'General Wholesale Distributor',
+      supplierName,
       paymentMode,
       items: validItems,
-      date: selectedDate, // records for currently selected date
+      date: selectedDate,
       storeName: storeName || localStorage.getItem('sgrocery_store_name') || 'Maa Laxmi Store',
     });
 
     setShowAddPurchaseModal(false);
-    // Reset form
     setPurchaseLineItems([{ productName: 'Fortune Mustard Oil (1L)', quantity: 5, unitPrice: 130 }]);
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#f7f8fa] text-slate-800 flex flex-col justify-between selection:bg-emerald-600 selection:text-white animate-fadeIn pb-16">
+    <div className="w-full min-h-screen bg-[#f7f8fa] dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col justify-between selection:bg-emerald-600 selection:text-white animate-fadeIn pb-16">
       
       {/* ==================== 1. TOP APP BAR ==================== */}
-      <header className="w-full bg-white border-b border-slate-100 sticky top-0 z-30 shadow-xs">
+      <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           
           {/* Left: Back Arrow + Page Title */}
@@ -180,13 +164,13 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                 soundFx.playClick();
                 onBack();
               }}
-              className="p-1 -ml-1 rounded-xl hover:bg-slate-100 text-slate-900 transition-colors cursor-pointer"
+              className="p-1 -ml-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white transition-colors cursor-pointer"
               title="Back to Home"
               aria-label="Back to Home"
             >
               <ArrowLeft className="w-6 h-6 stroke-[2.4]" />
             </button>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
               Today's Purchase
             </h1>
           </div>
@@ -196,7 +180,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
             <button
               type="button"
               onClick={() => soundFx.playClick()}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
               title="Search"
               aria-label="Search"
             >
@@ -206,7 +190,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
             <button
               type="button"
               onClick={() => soundFx.playClick()}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white transition-colors cursor-pointer"
               title="Notifications"
               aria-label="Notifications"
             >
@@ -235,12 +219,12 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
               soundFx.playClick();
               setShowDateDropdown(!showDateDropdown);
             }}
-            className="border border-emerald-300 bg-emerald-50/90 hover:bg-emerald-100 text-emerald-800 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+            className="border border-emerald-300 dark:border-emerald-700 bg-emerald-50/90 dark:bg-emerald-950/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
             aria-label="Select Date"
           >
-            <Calendar className="w-4 h-4 text-emerald-800 stroke-[2.2]" />
+            <Calendar className="w-4 h-4 text-emerald-800 dark:text-emerald-300 stroke-[2.2]" />
             <span>{dateDisplayLabel}</span>
-            <ChevronDown className="w-4 h-4 text-emerald-800 stroke-[2.5]" />
+            <ChevronDown className="w-4 h-4 text-emerald-800 dark:text-emerald-300 stroke-[2.5]" />
           </button>
 
           {/* Date Selector Popover Dropdown */}
@@ -250,8 +234,8 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                 className="fixed inset-0 z-40"
                 onClick={() => setShowDateDropdown(false)}
               />
-              <div className="absolute top-10 right-0 z-50 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 text-xs font-semibold animate-scaleUp">
-                <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+              <div className="absolute top-10 right-0 z-50 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 text-xs font-semibold animate-scaleUp">
+                <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
                   Select Purchase Date (IST)
                 </div>
 
@@ -269,20 +253,20 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                       }}
                       className={`w-full px-3.5 py-2.5 text-left flex items-center justify-between transition-colors cursor-pointer ${
                         isSelected
-                          ? 'bg-emerald-50 text-emerald-800 font-bold'
-                          : 'text-slate-700 hover:bg-slate-50'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                        <Calendar className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                         <span>{label}</span>
                       </div>
-                      {isSelected && <Check className="w-4 h-4 text-emerald-700 stroke-[2.5]" />}
+                      {isSelected && <Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400 stroke-[2.5]" />}
                     </button>
                   );
                 })}
 
-                <div className="border-t border-slate-100 mt-1 pt-1">
+                <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -290,7 +274,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                       setShowDateDropdown(false);
                       setShowCustomDatePicker(true);
                     }}
-                    className="w-full px-3.5 py-2 text-left text-emerald-700 hover:bg-emerald-50 font-bold flex items-center gap-2 cursor-pointer"
+                    className="w-full px-3.5 py-2 text-left text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-700 font-bold flex items-center gap-2 cursor-pointer"
                   >
                     <span>📅 Choose Other Date...</span>
                   </button>
@@ -301,22 +285,22 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
         </div>
 
         {/* METRIC CARD: Today's Purchase (Matching reference image with soft blue card & cart icon) */}
-        <section className="bg-[#f0f7ff] border border-[#d6eaff] rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-2xs">
+        <section className="bg-[#f0f7ff] dark:bg-blue-950/40 border border-[#d6eaff] dark:border-blue-900/60 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#0084ff] text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shrink-0 shadow-xs">
               <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.2]" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-slate-700 leading-snug">
+              <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-blue-300/80 leading-snug">
                 {selectedDate === purchaseService.getTodayISTDate() ? "Today's Purchase" : `Purchase (${dateDisplayLabel})`}
               </p>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight mt-0.5 truncate">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
                 ₹{totalPurchaseAmount.toLocaleString()}
               </p>
             </div>
           </div>
 
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#dff0ff] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#dff0ff] dark:bg-blue-900/60 flex items-center justify-center shrink-0">
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#0084ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
               <polyline points="16 7 22 7 22 13" />
@@ -326,7 +310,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
 
         {/* PURCHASE DETAILS SECTION HEADER & QUICK RECORD BUTTON */}
         <div className="flex items-center justify-between pt-1">
-          <h2 className="text-base sm:text-lg font-black text-slate-900">
+          <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
             Purchase Details
           </h2>
 
@@ -336,7 +320,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
               soundFx.playClick();
               setShowAddPurchaseModal(true);
             }}
-            className="text-xs font-bold text-blue-800 bg-blue-100/70 hover:bg-blue-200/80 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
+            className="text-xs font-bold text-blue-800 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-950/60 hover:bg-blue-200/80 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
             title="Record Purchase"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
@@ -352,13 +336,13 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search product..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0084ff] shadow-2xs"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0084ff] shadow-2xs"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <X className="w-4 h-4" />
             </button>
@@ -366,7 +350,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
         </div>
 
         {/* TABLE COLUMN HEADER BAR (Soft mint green bar matching reference image) */}
-        <div className="bg-[#dcf4e5] text-[#065f46] text-xs font-bold rounded-xl px-3.5 py-2.5 flex items-center justify-between select-none shadow-2xs">
+        <div className="bg-[#dcf4e5] dark:bg-emerald-950/60 text-[#065f46] dark:text-emerald-300 dark:border dark:border-emerald-900/50 text-xs font-bold rounded-xl px-3.5 py-2.5 flex items-center justify-between select-none shadow-2xs">
           <span className="w-8 text-left">No.</span>
           <span className="flex-1 text-left pl-2">Product Name</span>
           <span className="w-20 sm:w-24 text-center">Quantity</span>
@@ -381,10 +365,10 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
             <div className="mb-2">
               <OpenBoxGraphic className="w-28 h-28 sm:w-32 sm:h-32" />
             </div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-2">
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-2">
               No purchase found
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
               There are no purchases for the selected date.
             </p>
 
@@ -402,25 +386,25 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
           </div>
         ) : (
           /* POPULATED ROWS */
-          <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100 overflow-hidden shadow-2xs">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/60 overflow-hidden shadow-2xs">
             {filteredProducts.map((item, idx) => (
               <div
                 key={item.id || idx}
-                className="px-3.5 py-3 flex items-center justify-between text-xs sm:text-sm hover:bg-slate-50/80 transition-colors"
+                className="px-3.5 py-3 flex items-center justify-between text-xs sm:text-sm hover:bg-slate-50/80 dark:hover:bg-slate-750 transition-colors"
               >
-                <span className="w-8 text-left font-bold text-slate-400">
+                <span className="w-8 text-left font-bold text-slate-400 dark:text-slate-500">
                   {idx + 1}
                 </span>
-                <span className="flex-1 text-left pl-2 font-bold text-slate-800">
+                <span className="flex-1 text-left pl-2 font-bold text-slate-800 dark:text-slate-100">
                   {item.productName}
                 </span>
-                <span className="w-20 sm:w-24 text-center font-semibold text-slate-700">
+                <span className="w-20 sm:w-24 text-center font-semibold text-slate-700 dark:text-slate-300">
                   {item.quantity} pcs
                 </span>
-                <span className="w-20 sm:w-24 text-right font-semibold text-slate-700">
+                <span className="w-20 sm:w-24 text-right font-semibold text-slate-700 dark:text-slate-300">
                   ₹{item.unitPrice}
                 </span>
-                <span className="w-20 sm:w-24 text-right font-black text-slate-900">
+                <span className="w-20 sm:w-24 text-right font-black text-slate-900 dark:text-white">
                   ₹{item.totalAmount.toLocaleString()}
                 </span>
               </div>
@@ -429,11 +413,11 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
         )}
 
         {/* BOTTOM SUMMARY BAR (Grand Total matching reference image) */}
-        <div className="bg-[#e7f7ed] border border-emerald-200/80 rounded-2xl p-4 flex items-center justify-between shadow-xs">
-          <span className="font-black text-sm sm:text-base text-slate-900">
+        <div className="bg-[#e7f7ed] dark:bg-emerald-950/70 border border-emerald-200/80 dark:border-emerald-800 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+          <span className="font-black text-sm sm:text-base text-slate-900 dark:text-emerald-200">
             Grand Total
           </span>
-          <span className="font-black text-lg sm:text-xl text-slate-900">
+          <span className="font-black text-lg sm:text-xl text-slate-900 dark:text-white">
             ₹{grandTotal.toLocaleString()}
           </span>
         </div>
@@ -443,23 +427,23 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
       {/* ==================== 3. CUSTOM DATE PICKER MODAL ==================== */}
       {showCustomDatePicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-4 animate-scaleUp">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 animate-scaleUp border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
+              <h3 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#0084ff]" />
                 Select Specific Date
               </h3>
               <button
                 type="button"
                 onClick={() => setShowCustomDatePicker(false)}
-                className="p-1 rounded-full hover:bg-slate-100 text-slate-500"
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">
+              <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
                 Choose Calendar Date (IST)
               </label>
               <input
@@ -467,7 +451,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                 max={purchaseService.getTodayISTDate()}
                 value={customDateInput || selectedDate}
                 onChange={(e) => setCustomDateInput(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0084ff]"
+                className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0084ff]"
               />
             </div>
 
@@ -475,7 +459,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
               <button
                 type="button"
                 onClick={() => setShowCustomDatePicker(false)}
-                className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200"
+                className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-600"
               >
                 Cancel
               </button>
@@ -499,18 +483,18 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
       {/* ==================== 4. RECORD NEW PURCHASE MODAL ==================== */}
       {showAddPurchaseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
-          <div className="w-full max-w-lg bg-white rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-scaleUp max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-scaleUp max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white">
             
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300 flex items-center justify-center">
                   <Plus className="w-5 h-5 stroke-[2.5]" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base text-slate-900 leading-tight">
+                  <h3 className="font-black text-base text-slate-900 dark:text-white leading-tight">
                     Record New Purchase
                   </h3>
-                  <p className="text-[11px] text-slate-500 font-semibold">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
                     Date: {dateDisplayLabel} ({selectedDate})
                   </p>
                 </div>
@@ -519,7 +503,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
               <button
                 type="button"
                 onClick={() => setShowAddPurchaseModal(false)}
-                className="p-1 rounded-full hover:bg-slate-100 text-slate-500"
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -530,41 +514,41 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
               {/* Supplier & Payment Mode */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Wholesale Supplier Name
                   </label>
                   <input
                     type="text"
                     value={supplierName}
                     onChange={(e) => setSupplierName(e.target.value)}
-                    className="w-full p-2 text-xs font-semibold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0084ff]"
+                    className="w-full p-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0084ff]"
                     placeholder="e.g. Kolkata Wholesale Mart"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Payment Mode
                   </label>
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value as any)}
-                    className="w-full p-2 text-xs font-semibold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0084ff]"
+                    className="w-full p-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0084ff]"
                   >
-                    <option value="Bank Transfer">Bank Transfer / NEFT</option>
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Credit">Credit (Supplier Khata)</option>
+                    <option value="Bank Transfer" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Bank Transfer / NEFT</option>
+                    <option value="Cash" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Cash</option>
+                    <option value="UPI" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">UPI</option>
+                    <option value="Credit" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Credit (Supplier Khata)</option>
                   </select>
                 </div>
               </div>
 
               {/* Quick Pick Products from Catalog */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Select Products to Procure:
                 </label>
-                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700">
                   {standardGroceryCatalog.slice(0, 8).map((catItem) => (
                     <button
                       key={catItem.id}
@@ -577,7 +561,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                           { productName: catItem.name, quantity: 5, unitPrice: wholesalePrice },
                         ]);
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-[11px] font-bold text-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-blue-300 text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       <Plus className="w-3 h-3 text-[#0084ff]" />
                       <span>{catItem.name} (~₹{Math.round(catItem.unitPrice * 0.85)})</span>
@@ -589,13 +573,13 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
               {/* Line Items */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     Purchased Line Items
                   </label>
                   <button
                     type="button"
                     onClick={handleAddLineItem}
-                    className="text-xs font-bold text-[#0084ff] hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-[#0084ff] dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Item</span>
@@ -603,7 +587,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                 </div>
 
                 {purchaseLineItems.map((line, idx) => (
-                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-xs">
+                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 flex items-center gap-2 text-xs">
                     <input
                       type="text"
                       placeholder="Product Name"
@@ -613,7 +597,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                         updated[idx].productName = e.target.value;
                         setPurchaseLineItems(updated);
                       }}
-                      className="flex-1 p-1.5 rounded-lg border border-slate-200 bg-white font-semibold"
+                      className="flex-1 p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold"
                       required
                     />
 
@@ -628,7 +612,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                           updated[idx].quantity = Math.max(1, parseInt(e.target.value) || 1);
                           setPurchaseLineItems(updated);
                         }}
-                        className="w-full p-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-center"
+                        className="w-full p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold text-center"
                         required
                       />
                     </div>
@@ -644,12 +628,12 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                           updated[idx].unitPrice = Math.max(0, parseFloat(e.target.value) || 0);
                           setPurchaseLineItems(updated);
                         }}
-                        className="w-full p-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-right"
+                        className="w-full p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold text-right"
                         required
                       />
                     </div>
 
-                    <span className="w-16 text-right font-black text-slate-900">
+                    <span className="w-16 text-right font-black text-slate-900 dark:text-white">
                       ₹{(line.quantity * line.unitPrice).toLocaleString()}
                     </span>
 
@@ -667,9 +651,9 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
               </div>
 
               {/* Total Calculation */}
-              <div className="p-3 rounded-xl bg-blue-50 flex items-center justify-between font-bold text-xs">
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-between font-bold text-xs text-slate-800 dark:text-slate-100">
                 <span>Purchase Total Amount:</span>
-                <span className="text-base font-black text-[#0084ff]">
+                <span className="text-base font-black text-[#0084ff] dark:text-blue-400">
                   ₹{purchaseLineItems.reduce((acc, i) => acc + (i.quantity * i.unitPrice), 0).toLocaleString()}
                 </span>
               </div>
@@ -679,7 +663,7 @@ export const TodaysPurchaseDetails: React.FC<TodaysPurchaseDetailsProps> = ({ on
                 <button
                   type="button"
                   onClick={() => setShowAddPurchaseModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-xs text-slate-700"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 font-bold text-xs text-slate-700 dark:text-slate-200"
                 >
                   Cancel
                 </button>
