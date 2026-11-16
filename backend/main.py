@@ -5,12 +5,14 @@ Configured for deployment on Render
 Database: Firebase Firestore / Firebase Admin SDK
 """
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 import os
+import urllib.request
+import urllib.parse
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -124,6 +126,36 @@ def get_voice_phrases(lang: str = "en"):
         }
     }
     return phrases.get(lang, phrases["en"])
+
+@app.get("/api/tts")
+def text_to_speech(text: str, lang: str = "bn"):
+    """
+    Server-side Text-To-Speech proxy for natural Bengali speech synthesis.
+    Eliminates browser CORS restrictions and OS language pack dependencies.
+    """
+    if not text:
+        raise HTTPException(status_code=400, detail="Missing text parameter")
+    try:
+        url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={urllib.parse.quote(text)}&tl={lang}&client=tw-ob"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "*/*"
+            }
+        )
+        with urllib.request.urlopen(req) as resp:
+            audio_bytes = resp.read()
+            return Response(
+                content=audio_bytes,
+                media_type="audio/mpeg",
+                headers={
+                    "Cache-Control": "public, max-age=86400",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS streaming error: {str(e)}")
 
 # Store Profile Endpoints
 @app.post("/api/stores", status_code=status.HTTP_201_CREATED)

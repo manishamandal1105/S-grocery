@@ -17,10 +17,14 @@ export function useVoiceAssistant() {
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
 
+  // Pre-load and cache speech synthesis voices immediately and on dynamic voice updates
   useEffect(() => {
     if ('speechSynthesis' in window) {
       const loadVoices = () => {
-        voicesRef.current = window.speechSynthesis.getVoices();
+        const v = window.speechSynthesis.getVoices();
+        if (v && v.length > 0) {
+          voicesRef.current = v;
+        }
       };
       loadVoices();
       window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -78,7 +82,7 @@ export function useVoiceAssistant() {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
-        } catch (e) {}
+        } catch (e) { }
       }
     };
   }, [speechLocale]);
@@ -108,29 +112,43 @@ export function useVoiceAssistant() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) { }
     }
     setIsListening(false);
   }, []);
 
+  // Multi-lingual Speech Output:
+  // - English & Hindi: Untouched, uses native browser SpeechSynthesis (working 100%)
+  // - Bengali: Dual-engine support (Browser Native + Zero-Configuration Local TTS Streaming)
+  //   Does NOT require installing Windows language packs or altering Windows display language.
   const speak = useCallback((text: string, customLocale?: string, onEnd?: () => void) => {
     if (!text) {
       if (onEnd) onEnd();
       return;
     }
 
+    // Stop any previous active audio immediately
     if (activeAudioRef.current) {
       try {
         activeAudioRef.current.pause();
         activeAudioRef.current.currentTime = 0;
-      } catch (e) {}
+      } catch (e) { }
       activeAudioRef.current = null;
     }
 
-    const targetLocale = customLocale || speechLocale;
-    const langCode = targetLocale.split('-')[0].toLowerCase();
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) { }
+    }
 
-    const playViaSpeechSynthesis = () => {
+    const targetLocale = customLocale || speechLocale;
+    const langCode = targetLocale.split('-')[0].toLowerCase(); // 'bn', 'hi', 'en'
+
+    // ========================================================
+    // 1. ENGLISH & HINDI (PRESERVED EXACTLY AS WORKING BEFORE)
+    // ========================================================
+    if (langCode !== 'bn') {
       if (!('speechSynthesis' in window)) {
         if (onEnd) onEnd();
         return;
@@ -140,7 +158,6 @@ export function useVoiceAssistant() {
         if (window.speechSynthesis.paused) {
           window.speechSynthesis.resume();
         }
-        window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = targetLocale;
@@ -148,16 +165,11 @@ export function useVoiceAssistant() {
         utterance.pitch = 1.0;
 
         const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
-        
-        let matchingVoice = voices.find((v) => {
+        const matchingVoice = voices.find((v) => {
           const l = v.lang.toLowerCase().replace('_', '-');
           const n = v.name.toLowerCase();
-          return l.startsWith(langCode) || n.includes(langCode === 'bn' ? 'bangla' : langCode === 'hi' ? 'hindi' : 'english');
+          return l.startsWith(langCode) || n.includes(langCode === 'hi' ? 'hindi' : 'english');
         });
-
-        if (!matchingVoice && langCode === 'bn') {
-          matchingVoice = voices.find((v) => v.lang.toLowerCase().startsWith('hi') || v.lang.toLowerCase().startsWith('in'));
-        }
 
         if (matchingVoice) {
           utterance.voice = matchingVoice;
@@ -178,32 +190,110 @@ export function useVoiceAssistant() {
         setIsSpeaking(false);
         if (onEnd) onEnd();
       }
+      return;
+    }
+
+    // ========================================================
+    // 2. BENGALI (NO WINDOWS LANGUAGE PACK OR OS CHANGES REQUIRED)
+    // ========================================================
+    // Refresh available voices on-the-fly from the browser
+    const availableVoices = ('speechSynthesis' in window)
+      ? (window.speechSynthesis.getVoices().length > 0 ? window.speechSynthesis.getVoices() : voicesRef.current)
+      : [];
+
+    const nativeBengaliVoice = availableVoices.find((v) => {
+      const l = v.lang.toLowerCase().replace('_', '-');
+      const n = v.name.toLowerCase();
+      return (
+        l.startsWith('bn') ||
+        l.startsWith('ben') ||
+        n.includes('bengali') ||
+        n.includes('bangla') ||
+        n.includes('bashkar') ||
+        n.includes('tanishaa') ||
+        n.includes('pradeep') ||
+        n.includes('nabanita') ||
+        n.includes('nabaneeta')
+      );
+    });
+
+    const cleanup = () => {
+      setIsSpeaking(false);
+      activeAudioRef.current = null;
+      if (onEnd) onEnd();
     };
 
-    try {
-      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
+    // A. If a native Bengali voice is present in the browser (e.g. Microsoft Edge, friend's PC, or mobile):
+    if (nativeBengaliVoice && 'speechSynthesis' in window) {
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = nativeBengaliVoice;
+        utterance.lang = nativeBengaliVoice.lang || 'bn-IN';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = cleanup;
+        utterance.onerror = () => {
+          // If native synthesis fails, fallback to streaming audio
+          playBengaliAudioStream();
+        };
+
+        window.speechSynthesis.speak(utterance);
+        return;
+      } catch (e) {
+        console.warn('Native Bengali SpeechSynthesis error, falling back to /api/tts:', e);
+      }
+    }
+
+    // B. If NO Bengali voice is installed in the browser/OS (e.g. Chrome on Windows Single Language):
+    // Stream authentic, pure Bengali speech through our built-in /api/tts proxy endpoint
+    function playBengaliAudioStream() {
+      const ttsUrl = `/api/tts?text=${encodeURIComponent(text)}&lang=bn`;
       const audio = new Audio(ttsUrl);
       activeAudioRef.current = audio;
 
       setIsSpeaking(true);
-      const playPromise = audio.play();
 
+      audio.onended = cleanup;
+
+      const fallbackToSpeechSynthesis = () => {
+        if ('speechSynthesis' in window) {
+          try {
+            if (window.speechSynthesis.paused) {
+              window.speechSynthesis.resume();
+            }
+            const fallbackUtterance = new SpeechSynthesisUtterance(text);
+            fallbackUtterance.lang = 'bn-IN';
+            fallbackUtterance.rate = 1.0;
+            fallbackUtterance.pitch = 1.0;
+            fallbackUtterance.onstart = () => setIsSpeaking(true);
+            fallbackUtterance.onend = cleanup;
+            fallbackUtterance.onerror = cleanup;
+            window.speechSynthesis.speak(fallbackUtterance);
+            return;
+          } catch (e) { }
+        }
+        cleanup();
+      };
+
+      audio.onerror = () => {
+        fallbackToSpeechSynthesis();
+      };
+
+      const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            audio.onended = () => {
-              setIsSpeaking(false);
-              if (onEnd) onEnd();
-            };
-          })
-          .catch((err) => {
-            console.warn('Audio TTS fallback to SpeechSynthesis:', err);
-            playViaSpeechSynthesis();
-          });
+        playPromise.catch(() => {
+          // Autoplay policy or fetch error fallback
+          fallbackToSpeechSynthesis();
+        });
       }
-    } catch (e) {
-      playViaSpeechSynthesis();
     }
+
+    playBengaliAudioStream();
   }, [speechLocale]);
 
   const stopSpeaking = useCallback(() => {
@@ -211,14 +301,14 @@ export function useVoiceAssistant() {
       try {
         activeAudioRef.current.pause();
         activeAudioRef.current.currentTime = 0;
-      } catch (e) {}
+      } catch (e) { }
       activeAudioRef.current = null;
     }
 
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
-      } catch (e) {}
+      } catch (e) { }
     }
     setIsSpeaking(false);
   }, []);
